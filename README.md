@@ -23,9 +23,11 @@ One folder per lab week, one sub-folder per experiment.
 | Week | Experiment | Status |
 |---|---|---|
 | 1 | 8085 — add two 8-bit numbers | done, verified in simulator |
-| 1 | 8085 — addition with carry propagation | in progress |
+| 1 | 8085 — addition with carry propagation | written, to verify in sim |
 | 1 | 8051 — LED blink (Assembly + C) | not started |
-| 2 | — | not started |
+| 2 | Lab 1 T1 — sensor addition (8-bit) | done, verified in simulator |
+| 2 | Lab 1 T2 — offset subtraction, borrow | done, verified in simulator |
+| 2 | Lab 1 T3 — 16-bit counter addition | done, verified in simulator |
 
 ## Getting set up on a new machine
 

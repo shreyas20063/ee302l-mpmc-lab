@@ -5,7 +5,7 @@
 | File | What it does |
 |---|---|
 | `add_8bit.asm` | The assigned exercise. Stores the 8-bit sum only. |
-| `add_8bit_carry.asm` | Extension: full 16-bit result. **Has a TODO to complete.** |
+| `add_8bit_carry.asm` | Extension: also stores the carry at `7504H`. |
 
 ## Memory map
 

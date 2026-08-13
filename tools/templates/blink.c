@@ -1,16 +1,8 @@
-/*
- * Pt-51 (AT89C5131A) — blink all four onboard LEDs.
- *
- * P1 upper nibble (P1.4-P1.7) = LED1-LED4, lower nibble (P1.0-P1.3) = SW1-SW4,
- * so 0xF0 drives the LEDs without disturbing the switch inputs.
- *
- * The deck uses #include <AT89C513xA.h>, which is an MCU 8051 IDE header.
- * SDCC ships <8051.h>, which defines P1 for any MCS-51 part; use that here and
- * swap the include back if you rebuild this on a lab machine.
- */
+/* Pt-51 LED blink - P1 upper nibble is the four LEDs */
+/* SDCC header; on lab machines include <AT89C513xA.h> instead */
 #include <8051.h>
 
-static void delay(void)
+void delay(void)
 {
 	int i, j;
 	for (i = 0; i < 0xff; i++)
@@ -21,9 +13,9 @@ static void delay(void)
 void main(void)
 {
 	while (1) {
-		P1 = 0xF0;	/* all four LEDs on  */
+		P1 = 0xF0;
 		delay();
-		P1 = 0x00;	/* all four LEDs off */
+		P1 = 0x00;
 		delay();
 	}
 }
