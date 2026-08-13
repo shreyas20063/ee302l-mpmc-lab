@@ -37,15 +37,24 @@ registers come from the AT89C5131A datasheet (not in sdcc's 8051.h).
 Title: `IR Remote Cloner using 8051`
 
 ```
-1. 8051 Development Kit
-2. TSOP1738 IR Receiver Module - 1
-3. IR LED (940 nm) - 2
-4. BC547 Transistor - 1
-5. Resistors (100R, 1k, 10k) - few
-6. 16x2 LCD Display - 1 (status/slot display, later milestone)
-7. Any spare IR remote for testing
-8. Breadboard and Connecting Wires
+1. 8051 Development Kit - 1
+2. TSOP1738 IR Receiver (38 kHz) - 1
+3. IR LED, 940 nm - 2
+4. BC547 NPN Transistor (or 2N2222) - 1
+5. Resistors: 47 ohm - 1, 100 ohm - 1, 1k - 1, 10k - 1
+6. Capacitor: 4.7 uF electrolytic - 1
+7. 16x2 LCD Display (HD44780) - 1
+8. Push Buttons - 2
+9. Breadboard - 1
+10. Jumper Wires (male-male and male-female)
+11. Spare IR remote (TV/DVD) for testing - 1
 ```
+
+Purpose of the passives: 47R limits IR LED current (~50 mA pulsed), 1k is
+the transistor base resistor, 100R + 4.7 uF is the supply filter the TSOP
+datasheet requires, 10k is a pull-up on the TSOP output. No external power
+supply needed (USB 5 V is enough) and no contrast pot (trimmer is on the
+Pt-51 board).
 
 ## Milestones
 
