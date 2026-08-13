@@ -11,6 +11,7 @@ Coursework for both halves of the syllabus:
 
 ```
 Week N/<experiment>/     source, plus a README with memory map and results
+Project/                 semester project: IR Remote Cloner (see Project/README.md)
 tools/                   toolchain + build files (see tools/README.md)
 tools/templates/         starting points for new 8051 programs
 Reference/               course deck and datasheets

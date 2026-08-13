@@ -1,0 +1,76 @@
+# IR Remote Cloner using 8051
+
+Semester project, EE302L. Point any IR remote at the board and press
+**record** — it captures the signal. Press **replay** — the board becomes
+that remote.
+
+## How it works
+
+Every IR remote sends a pattern of **marks** (38 kHz IR bursts) and
+**spaces** (silence). The TSOP1738 receiver strips the 38 kHz carrier and
+outputs the envelope: low during a mark, high during a space.
+
+- **Capture:** time the length of every low/high level on the TSOP pin
+  with timer 0 (0.5 µs ticks) and store the durations. No protocol
+  decoding needed — we don't care if it's NEC or Sony or RC-5, we just
+  replay the same shape.
+- **Replay:** walk the stored durations; during marks drive the IR LED
+  with a 38 kHz carrier, during spaces stay off. The receiver in the TV
+  can't tell the difference.
+
+## Pins (Pt-51)
+
+| Signal | Pin | Note |
+|---|---|---|
+| TSOP1738 out | P3.2 | idles high, active low |
+| IR LED (via transistor) | P1.4 | shared with onboard LED1 — it doubles as a transmit indicator |
+| Record button | P1.0 | onboard SW1 |
+| Replay button | P1.1 | onboard SW2 |
+| Busy light | P1.7 | onboard LED4 |
+
+38 kHz carrier plan: PCA high-speed output on CEX1 (= P1.4), so the
+hardware generates the carrier and the CPU only gates it on/off. PCA
+registers come from the AT89C5131A datasheet (not in sdcc's 8051.h).
+
+## For the project sheet
+
+Title: `IR Remote Cloner using 8051`
+
+```
+1. 8051 Development Kit
+2. TSOP1738 IR Receiver Module - 1
+3. IR LED (940 nm) - 2
+4. BC547 Transistor - 1
+5. Resistors (100R, 1k, 10k) - few
+6. 16x2 LCD Display - 1 (status/slot display, later milestone)
+7. Any spare IR remote for testing
+8. Breadboard and Connecting Wires
+```
+
+## Milestones
+
+1. **See the signal** — TSOP wired, LED4 mirrors IR_IN. Proves receiver
+   works before any capture logic.
+2. **Capture** — record a burst, show edge count. `ir_capture()` is
+   written; verify `n_edges` lands around 67 for a NEC remote.
+3. **Carrier** — PCA generating 38 kHz on P1.4, checked on a scope.
+4. **Replay** — full record → replay against a real TV/AC. The demo.
+5. **Stretch** — multiple memory slots on the LCD, persist codes so they
+   survive power-off, label buttons.
+
+## Building
+
+macOS (this repo, compile check only — flashing needs the board):
+
+```bash
+cd Project && make
+```
+
+Lab: open `main.c` in MCU 8051 IDE, compile, flash the hex with FLIP.
+
+## Current state
+
+Scaffold compiles (sdcc 4.6.0). Capture and replay logic written but
+untested on hardware; `carrier_on()` is a placeholder until the PCA is
+configured. Buffer sits in the chip's 1 KB on-chip XRAM
+(`--xram-size 1024`).
