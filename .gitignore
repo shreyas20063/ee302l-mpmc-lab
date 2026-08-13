@@ -1,0 +1,28 @@
+# --- 8085 Simulator runtime state -------------------------------------------
+# The JAR writes these into whatever directory it is launched from.
+backup.dat
+settings.dat
+*.dump
+
+# --- SDCC / sdas8051 build intermediates -------------------------------------
+# The .hex IS kept - it is the artifact you flash and submit.
+*.ihx
+*.rel
+*.lst
+*.rst
+*.sym
+*.map
+*.mem
+*.lk
+*.adb
+*.asm.lst
+
+# --- macOS -------------------------------------------------------------------
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# --- OneDrive sync conflicts -------------------------------------------------
+*-conflict-*
+*conflicted copy*

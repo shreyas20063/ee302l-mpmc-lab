@@ -1,0 +1,40 @@
+# EE302L — Microprocessor and Microcontroller Lab
+
+Sem 5, IIT Dharwad. Instructor: Prof. Samba Raju Chiluveru.
+
+Coursework for both halves of the syllabus:
+
+- **8085 microprocessor** — assembly, run in Jubin Mitra's 8085 Simulator
+- **8051 microcontroller** — assembly and C, on the Pt-51 board (Atmel AT89C5131A)
+
+## Layout
+
+```
+Week N/<experiment>/     source, plus a README with memory map and results
+tools/                   toolchain + build files (see tools/README.md)
+tools/templates/         starting points for new 8051 programs
+Reference/               course deck and datasheets
+```
+
+One folder per lab week, one sub-folder per experiment.
+
+## Progress
+
+| Week | Experiment | Status |
+|---|---|---|
+| 1 | 8085 — add two 8-bit numbers | done, verified in simulator |
+| 1 | 8085 — addition with carry propagation | in progress |
+| 1 | 8051 — LED blink (Assembly + C) | not started |
+| 2 | — | not started |
+
+## Getting set up on a new machine
+
+The toolchain here is macOS-specific because the course material targets
+Ubuntu/Windows. See [tools/README.md](tools/README.md) for what's installed,
+what has no macOS equivalent, and the assembly-dialect differences that matter.
+
+Quick check that everything is present:
+
+```bash
+make -f tools/Makefile.8051 check
+```

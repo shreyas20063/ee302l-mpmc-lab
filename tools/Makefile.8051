@@ -1,0 +1,67 @@
+# Build 8051 programs for the Pt-51 board (AT89C5131A) with SDCC on macOS.
+#
+# This stands in for MCU 8051 IDE, which has no macOS build. It produces the
+# same artifact the lab flow needs: an Intel HEX file, flashable with FLIP on
+# the lab PCs or with dfu-programmer here.
+#
+# Usage, from an experiment folder:
+#   make -f ../../tools/Makefile.8051 SRC=led_blink.c
+#   make -f ../../tools/Makefile.8051 SRC=led_blink.asm
+#   make -f ../../tools/Makefile.8051 SRC=led_blink.c flash
+#   make -f ../../tools/Makefile.8051 check
+#
+# IMPORTANT — two different assembly dialects:
+#   MCU 8051 IDE (lab)  uses Intel/ASEM-51 syntax:  org 100h / mov p1,#0F0H / end
+#   sdas8051 (this Mac) uses ASxxxx syntax:         .org 0x0100 / mov P1,#0xF0
+# A .asm written for one will NOT assemble with the other. See
+# tools/templates/blink.asm for the ASxxxx form. C is portable between both.
+
+SRC       ?=
+CODE_LOC  ?= 0x0000
+MCU       ?= at89c5131
+NAME       = $(basename $(SRC))
+
+SDCC      ?= sdcc
+SDAS      ?= sdas8051
+PACKIHX   ?= packihx
+DFU       ?= dfu-programmer
+
+# --model-small keeps variables in the 128 bytes of internal RAM, which is what
+# you want on this part unless you deliberately enable external XDATA.
+CFLAGS    ?= -mmcs51 --model-small --code-loc $(CODE_LOC)
+
+.PHONY: all flash clean check
+
+all: $(NAME).hex
+
+ifeq ($(suffix $(SRC)),.c)
+$(NAME).hex: $(SRC)
+	$(SDCC) $(CFLAGS) $<
+	$(PACKIHX) $(NAME).ihx > $(NAME).hex
+	@echo "Built $(NAME).hex"
+else
+# sdas8051 assembles to .rel; sdcc is then used as the linker driver, which is
+# the combination that actually yields a .ihx (calling sdld directly does not).
+$(NAME).hex: $(SRC)
+	$(SDAS) -losgff $<
+	$(SDCC) -mmcs51 --code-loc $(CODE_LOC) $(NAME).rel
+	$(PACKIHX) $(NAME).ihx > $(NAME).hex
+	@echo "Built $(NAME).hex"
+endif
+
+# Needs the board in bootloader mode first: USB switch to DETACH, hold BOOT,
+# tap RESET, release BOOT, switch to ATTACH. Same sequence FLIP requires.
+flash: $(NAME).hex
+	$(DFU) $(MCU) erase
+	$(DFU) $(MCU) flash $(NAME).hex
+	@echo "Flashed. Press RESET on the Pt-51 to run."
+
+check:
+	@command -v $(SDCC)    >/dev/null && echo "sdcc:           $$($(SDCC) --version | head -1 | cut -c1-40)" || echo "sdcc:           MISSING"
+	@command -v $(SDAS)    >/dev/null && echo "sdas8051:       present" || echo "sdas8051:       MISSING"
+	@command -v $(PACKIHX) >/dev/null && echo "packihx:        present" || echo "packihx:        MISSING"
+	@command -v $(DFU)     >/dev/null && echo "dfu-programmer: present" || echo "dfu-programmer: MISSING"
+
+clean:
+	rm -f *.ihx *.lk *.map *.mem *.rel *.rst *.sym *.lst *.asm.lst
+	@echo "Cleaned intermediates (kept .hex and sources)"
