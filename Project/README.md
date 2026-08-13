@@ -56,18 +56,31 @@ datasheet requires, 10k is a pull-up on the TSOP output. No external power
 supply needed (USB 5 V is enough) and no contrast pot (trimmer is on the
 Pt-51 board).
 
-## Milestones
+## Roadmap (full spec — all of it is committed scope, not stretch)
 
 1. **See the signal** — TSOP wired, LED4 mirrors IR_IN. Proves receiver
    works before any capture logic.
 2. **Capture** — record a burst, show edge count. `ir_capture()` is
    written; verify `n_edges` lands around 67 for a NEC remote.
-3. **Carrier** — PCA generating 38 kHz on P1.4, checked on a scope.
-4. **Replay** — full record → replay against a real TV/AC. The demo.
-5. **Compatibility** — see below: long-press capture, carrier select,
-   loopback self-test.
-6. **Stretch** — multiple memory slots on the LCD, persist codes so they
-   survive power-off, label buttons.
+3. **Carrier** — PCA high-speed output generating 38 kHz on P1.4,
+   verified on a scope. Save the scope shot for the report.
+4. **Replay** — full record → replay against a real TV/AC. First demo.
+5. **Compatibility** — 150 ms silence window so one recording holds a
+   whole keypress (Sony triples, AC multi-frame); carrier selectable
+   36/38/40 kHz via SW3.
+6. **UI** — LCD status line + 4 memory slots (SW selects slot): a working
+   universal remote, not a single-code trick.
+7. **Loopback self-test** — replay at our own TSOP, re-capture, diff the
+   duration arrays, show match % on the LCD. The proof mechanism, and
+   the demo-day party trick.
+8. **NEC decoder** — when a capture parses as NEC (9 ms lead mark +
+   4.5 ms space), decode and display address/command bytes on the LCD.
+   Raw replay never depends on this; it is pure display value.
+9. **Persistence** — store slots in the AT89C5131A's on-chip EEPROM so
+   codes survive power-off (verify the EEPROM register interface in the
+   datasheet; if unavailable, document volatile storage as a limitation).
+10. **Report artifacts** — scope captures of carrier and envelope, timing
+    tables, and the brand test matrix below.
 
 ## Compatibility plan
 
