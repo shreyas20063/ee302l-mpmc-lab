@@ -12,7 +12,7 @@
 
 #define MAX_EDGES 400			/* AC remotes send 300+ edges */
 __xdata unsigned int dur[MAX_EDGES];	/* mark/space lengths in timer ticks */
-unsigned char n_edges = 0;
+unsigned int n_edges = 0;
 
 /* timer 0, mode 1: one tick = one machine cycle = 0.5 us at 24 MHz */
 static void t0_init(void)
@@ -73,7 +73,7 @@ static void carrier_off(void)
 /* play the burst back: marks = carrier on, spaces = carrier off */
 static void ir_replay(void)
 {
-	unsigned char i;
+	unsigned int i;
 
 	for (i = 0; i < n_edges; i++) {
 		if ((i & 1) == 0)
