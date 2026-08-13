@@ -10,7 +10,7 @@
 #define SW2	P1_1
 #define LED	P1_7
 
-#define MAX_EDGES 100
+#define MAX_EDGES 400			/* AC remotes send 300+ edges */
 __xdata unsigned int dur[MAX_EDGES];	/* mark/space lengths in timer ticks */
 unsigned char n_edges = 0;
 

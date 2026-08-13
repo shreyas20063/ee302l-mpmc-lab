@@ -64,8 +64,27 @@ Pt-51 board).
    written; verify `n_edges` lands around 67 for a NEC remote.
 3. **Carrier** — PCA generating 38 kHz on P1.4, checked on a scope.
 4. **Replay** — full record → replay against a real TV/AC. The demo.
-5. **Stretch** — multiple memory slots on the LCD, persist codes so they
+5. **Compatibility** — see below: long-press capture, carrier select,
+   loopback self-test.
+6. **Stretch** — multiple memory slots on the LCD, persist codes so they
    survive power-off, label buttons.
+
+## Compatibility plan
+
+Three things decide whether an arbitrary remote/device pair works:
+
+| Axis | Problem | Fix |
+|---|---|---|
+| Carrier | Philips = 36 kHz, NEC = 38, Sony = 40; TSOP1738 hears 36-40 (56 kHz is out of scope) | replay carrier is one PCA constant; SW3 cycles 36/38/40, LCD shows it |
+| Repeats | Sony sends each keypress 3x; AC remotes send multi-frame bursts | end-of-capture silence threshold ~150 ms (count timer overflows), so one recording = the whole keypress with its gaps |
+| Frame length | AC remotes exceed 100 edges | buffer is 400 edges (800 B of the 1 KB XRAM) |
+
+**Loopback self-test:** point the IR LED at our own TSOP, replay a stored
+code, re-capture it, diff the duration arrays, show match % on the LCD.
+Verifies a clone with no TV needed - also the demo-day party trick.
+
+Test matrix: one NEC-family TV remote, one Sony, one AC remote, plus
+whatever else is lying around.
 
 ## Building
 
