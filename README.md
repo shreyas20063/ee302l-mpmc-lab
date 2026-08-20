@@ -29,6 +29,9 @@ One folder per lab week, one sub-folder per experiment.
 | 2 | Lab 1 T1 — sensor addition (8-bit) | done, verified in simulator |
 | 2 | Lab 1 T2 — offset subtraction, borrow | done, verified in simulator |
 | 2 | Lab 1 T3 — 16-bit counter addition | done, verified in simulator |
+| 3 | Lab 3 E1 — multiply by repeated addition | written, to verify in sim |
+| 3 | Lab 3 E2 — divide by repeated subtraction | written, to verify in sim |
+| 3 | Lab 3 E3 — safe-limit detection (branching) | written, to verify in sim |
 
 ## Getting set up on a new machine
 
