@@ -31,10 +31,10 @@ DCR B
 JNZ DELB
 RET
 
-; ~1 second at 1 MHz is LXI D,0A2C3H - shortened for the simulator,
-; same reason as task 2
+; ~1 second at 1 MHz is LXI D,0A2C3H. 0200H is the sweet spot for
+; watching the lights switch with simulation speed set to Normal
 ; uses DE so it cannot disturb B (seconds) or C (signal count)
-DEL1S: LXI D,0010H
+DEL1S: LXI D,0200H
 D1: DCX D
 MOV A,D
 ORA E
