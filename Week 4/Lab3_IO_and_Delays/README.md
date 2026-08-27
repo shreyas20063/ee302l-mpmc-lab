@@ -41,10 +41,16 @@ Iterations = 1,000,000 / 24 ≈ 41,667 = `A2C3H`. Call/setup overhead is
 cycle-accurate in real time, so the counter — not a stopwatch — is the
 evidence the delay is right.
 
-**Bench tip:** a real 1-second delay means the simulator grinds through
-~42k loop iterations per second of pattern. For a quick functional demo,
-temporarily set `LXI B,0010H` (and `LXI D,0010H` in task 3), show the
-sequence, then restore `A2C3H` for the record and the timing math.
+**The files ship with `0010H` as the delay count** so simulator runs
+finish instantly and the I/O grid actually paints (the simulator only
+repaints on halt, and it runs far slower than a real 1 MHz chip). For
+the record and viva, quote `A2C3H` and the arithmetic above — that is
+the answer for real hardware at 1 MHz; the short count is a simulator
+convenience, not the design value.
+
+**Where the pattern shows:** Devices tab → I/O Port Editor. Ports 01–04
+are the **first row** (labelled `00`), columns 1 to 4 → `FE 7C 38 10`.
+Task 3's port 20H is the row labelled `20`, first column.
 
 ## Edge cases and details that earn marks
 

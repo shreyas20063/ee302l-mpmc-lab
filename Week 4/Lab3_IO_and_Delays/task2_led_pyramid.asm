@@ -19,9 +19,11 @@ MVI A,10H
 OUT 04H
 RST 1
 
-; ~1 second at 1 MHz: loop body is 24 T-states,
-; 1000000 / 24 = 41667 = A2C3H iterations
-DELAY: LXI B,0A2C3H
+; ~1 second at 1 MHz is LXI B,0A2C3H (41667 laps x 24 T-states each).
+; the simulator runs far slower than a real 1 MHz chip and only repaints
+; when the program halts, so use a small count to see the pattern arrive;
+; quote A2C3H and the arithmetic for the real-time answer
+DELAY: LXI B,0010H
 DLOOP: DCX B
 MOV A,B		; DCX sets no flags, so test BC by hand
 ORA C

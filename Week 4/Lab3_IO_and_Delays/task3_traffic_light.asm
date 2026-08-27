@@ -31,9 +31,10 @@ DCR B
 JNZ DELB
 RET
 
-; ~1 second at 1 MHz, same 24 T-state loop as task 2
+; ~1 second at 1 MHz is LXI D,0A2C3H - shortened for the simulator,
+; same reason as task 2
 ; uses DE so it cannot disturb B (seconds) or C (signal count)
-DEL1S: LXI D,0A2C3H
+DEL1S: LXI D,0010H
 D1: DCX D
 MOV A,D
 ORA E
