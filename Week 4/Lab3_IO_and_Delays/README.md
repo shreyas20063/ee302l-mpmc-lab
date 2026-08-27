@@ -9,15 +9,17 @@ Code at `7000H` — **Start From = 7000** as always.
 |---|---|---|
 | 1 | `task1_adc_filter.asm` | `3000H-3004H` = `85 80 FF 90 A5`, `4000H` = `05` |
 | 2 | `task2_led_pyramid.asm` | Devices tab: port 01=`FE`, 02=`7C`, 03=`38`, 04=`10`, appearing 1 s apart |
-| 3 | `task3_traffic_light.asm` | port 20H cycles `04` (5 s) → `02` (2 s) → `01` (5 s), forever |
+| 3 | `task3_traffic_light.asm` | port 20H cycles `04` (5 s) → `02` (2 s) → `01` (5 s), two full cycles, then halts with `01` showing |
 
 ## Where to look
 
 Ports are NOT in the Memory tab — **Devices tab → I/O Port Editor**. `OUT`
 writes land in that grid (row = high nibble of the port number).
 
-Task 3 never stops by design (controllers don't). Use the simulator's
-**Stop** button, or set a breakpoint.
+Task 3 runs the sequence twice and halts (cycle count kept at `2100H`,
+set by the `MVI A,02H` near the top). A real controller loops forever —
+say so in the record; the `JNZ START` becoming `JMP START` is the
+one-line difference, worth mentioning if asked.
 
 ## The 1-second delay, shown work
 
