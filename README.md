@@ -32,6 +32,9 @@ One folder per lab week, one sub-folder per experiment.
 | 3 | Lab 3 E1 — multiply by repeated addition | written, to verify in sim |
 | 3 | Lab 3 E2 — divide by repeated subtraction | written, to verify in sim |
 | 3 | Lab 3 E3 — safe-limit detection (branching) | written, to verify in sim |
+| 4 | ADC threshold filter (arrays, CPI/STAX) | written, to verify in sim |
+| 4 | LED pyramid (OUT, CALL/RET, 1 s delay) | written, to verify in sim |
+| 4 | Traffic light controller (table-driven, forever loop) | written, to verify in sim |
 
 ## Getting set up on a new machine
 
