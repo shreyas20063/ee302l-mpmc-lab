@@ -8,7 +8,7 @@ Code at `7000H` — **Start From = 7000** as always.
 | Task | File | Expect |
 |---|---|---|
 | 1 | `task1_adc_filter.asm` | `3000H-3004H` = `85 80 FF 90 A5`, `4000H` = `05` |
-| 2 | `task2_led_pyramid.asm` | Devices tab: port 01=`FE`, 02=`7C`, 03=`38`, 04=`10`, appearing 1 s apart |
+| 2 | `task2_led_pyramid.asm` | Devices tab: pyramid of `01`s across grid rows 00/10/20/30 (see below), rows appearing 1 s apart |
 | 3 | `task3_traffic_light.asm` | port 20H cycles `04` (5 s) → `02` (2 s) → `01` (5 s), two full cycles, then halts with `01` showing |
 
 ## Where to look
@@ -48,8 +48,19 @@ the record and viva, quote `A2C3H` and the arithmetic above — that is
 the answer for real hardware at 1 MHz; the short count is a simulator
 convenience, not the design value.
 
-**Where the pattern shows:** Devices tab → I/O Port Editor. Ports 01–04
-are the **first row** (labelled `00`), columns 1 to 4 → `FE 7C 38 10`.
+**Where the pattern shows:** Devices tab → I/O Port Editor. Task 2 draws
+one `01` per lit LED — the port number picks the cell (high nibble =
+grid row, low nibble = column):
+
+```
+row 00:  01 01 01 01 01 01 01 00
+row 10:  00 01 01 01 01 01 00 00
+row 20:  00 00 01 01 01 00 00 00
+row 30:  00 00 00 01 00 00 00 00
+```
+
+The alternate `task2_led_pyramid_alt_byteports.asm` reads the circuit as
+"8 LEDs share one port" and outputs `FE 7C 38 10` to ports 01–04 instead.
 Task 3's port 20H is the row labelled `20`, first column.
 
 ## Edge cases and details that earn marks

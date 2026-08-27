@@ -1,31 +1,42 @@
-; Task 2 - inverted LED pyramid on four output ports, 1 s between rows
-; ports assumed 01H-04H (handout leaves them unspecified)
-; rows: FE = 1111.1110, 7C = 0111.1100, 38 = 0011.1000, 10 = 0001.0000
-; ports latch their value, so earlier rows stay lit on their own
+; Task 2 - inverted LED pyramid drawn in the I/O port grid, 01 = LED on
+; pattern is DATA: port list at 2000H, FF = end of row (delay), FE = end
+; 8085's OUT takes the port only as an immediate, so the loop writes each
+; port number into the OUT instruction's operand byte at 7051H before
+; running it (self-modifying code - the standard 8085 answer to this)
 
 # ORG 7000H
 
-LXI SP,0FFFFH	; CALL needs a working stack
-MVI A,0FEH
-OUT 01H
-CALL DELAY
-MVI A,7CH
-OUT 02H
-CALL DELAY
-MVI A,38H
-OUT 03H
-CALL DELAY
-MVI A,10H
-OUT 04H
-RST 1
+LXI SP,0FFFFH
+LXI H,2000H
+LOOP: MOV A,M
+INX H
+CPI 0FEH
+JZ DONE
+CPI 0FFH
+JZ ROWEND
+STA 7051H	; patch the port number into the OUT below
+MVI A,01H
+CALL POKE
+JMP LOOP
+ROWEND: CALL DELAY
+JMP LOOP
+DONE: RST 1
 
-; ~1 second at 1 MHz is LXI B,0A2C3H (41667 laps x 24 T-states each).
-; the simulator runs far slower than a real 1 MHz chip and only repaints
-; when the program halts, so use a small count to see the pattern arrive;
-; quote A2C3H and the arithmetic for the real-time answer
+# ORG 7050H
+POKE: OUT 00H	; operand byte at 7051H is rewritten before every call
+RET
+
+; 1 s at 1 MHz would be LXI B,0A2C3H - short count for the simulator
 DELAY: LXI B,0010H
 DLOOP: DCX B
-MOV A,B		; DCX sets no flags, so test BC by hand
+MOV A,B
 ORA C
 JNZ DLOOP
 RET
+
+; the pyramid itself: port = grid cell (high nibble row, low nibble col)
+# ORG 2000H
+# DB 00H,01H,02H,03H,04H,05H,06H,0FFH
+# DB 11H,12H,13H,14H,15H,0FFH
+# DB 22H,23H,24H,0FFH
+# DB 33H,0FEH
