@@ -8,7 +8,7 @@ Code at `7000H` — **Start From = 7000** as always.
 | Task | File | Expect |
 |---|---|---|
 | 1 | `task1_adc_filter.asm` | `3000H-3004H` = `85 80 FF 90 A5`, `4000H` = `05` |
-| 2 | `task2_led_pyramid.asm` | Devices tab: pyramid of `01`s across grid rows 00/10/20/30 (see below), rows appearing 1 s apart |
+| 2 | `task2_led_pyramid.asm` | Devices tab: pyramid of `01`s across grid rows 00/10/20/30 (see below), rows appearing 1 s apart. **Computed, not stored**: seed `FEH`, each row = `(prev<<1) AND (prev>>1)`, cells peeled off by `RLC` |
 | 3 | `task3_traffic_light.asm` | port 20H cycles `04` (5 s) → `02` (2 s) → `01` (5 s), two full cycles, then halts with `01` showing |
 
 ## Where to look
@@ -59,8 +59,20 @@ row 20:  00 00 01 01 01 00 00 00
 row 30:  00 00 00 01 00 00 00 00
 ```
 
-The alternate `task2_led_pyramid_alt_byteports.asm` reads the circuit as
-"8 LEDs share one port" and outputs `FE 7C 38 10` to ports 01–04 instead.
+Task 2 exists in four flavours, kept deliberately:
+
+| File | Approach |
+|---|---|
+| `task2_led_pyramid.asm` | **submission** — computed: seed + erosion recurrence + RLC bit-peel |
+| `task2_led_pyramid_alt_framebuffer.asm` | stored: 4×8 table of 01/00 scanned out |
+| `task2_led_pyramid_alt_byteports.asm` | other circuit reading: `FE 7C 38 10` to ports 01–04 |
+| `task2_led_pyramid_loop_hw_only.asm` | proper data-driven loop via self-modifying OUT — works on real 8085, ignored by this simulator |
+
+New instructions in the computed version: `RLC` (rotate A left, bit 7
+into CY *and* around to bit 0), `RAL`/`RAR` (rotate through CY — with CY
+pre-cleared by `ORA A` these act as plain shifts), `ANA` (AND into A),
+`ACI 00H` (add CY into A — turns the carry into a 00/01 byte).
+
 Task 3's port 20H is the row labelled `20`, first column.
 
 ## Edge cases and details that earn marks

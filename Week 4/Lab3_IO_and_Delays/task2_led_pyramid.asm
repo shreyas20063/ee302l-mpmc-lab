@@ -1,134 +1,125 @@
 ; Task 2 - inverted LED pyramid in the I/O port grid, 01 = LED on
-; the pattern is the 4x8 table at 2000H (a framebuffer); the code only
-; scans it out cell by cell, one row per second
-; (OUT's port is fixed per instruction on the 8085, and this simulator
-; executes its assembled listing so self-modifying OUT does not take -
-; hence one OUT per grid cell)
+; COMPUTED version: no pattern table. The only data is the seed row FEH;
+; every next row = (prev << 1) AND (prev >> 1), which erodes one LED from
+; each end (row widths 7,5,3,1). Cells are peeled off the row byte one
+; bit at a time with RLC.
+; D = current row byte, E = rotating copy during extraction
 
 # ORG 7000H
 
 LXI SP,0FFFFH
-LXI H,2000H
+MVI D,0FEH	; seed: top row, seven LEDs lit
 
-MOV A,M
+MOV E,D		; row 0 -> ports 00-07
+CALL GETBIT
 OUT 00H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 01H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 02H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 03H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 04H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 05H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 06H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 07H
-INX H
 CALL DELAY
+MOV A,D
+CALL NEXTROW
+MOV D,A
 
-MOV A,M
+MOV E,D		; row 1 -> ports 10-17
+CALL GETBIT
 OUT 10H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 11H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 12H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 13H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 14H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 15H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 16H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 17H
-INX H
 CALL DELAY
+MOV A,D
+CALL NEXTROW
+MOV D,A
 
-MOV A,M
+MOV E,D		; row 2 -> ports 20-27
+CALL GETBIT
 OUT 20H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 21H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 22H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 23H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 24H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 25H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 26H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 27H
-INX H
 CALL DELAY
+MOV A,D
+CALL NEXTROW
+MOV D,A
 
-MOV A,M
+MOV E,D		; row 3 -> ports 30-37
+CALL GETBIT
 OUT 30H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 31H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 32H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 33H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 34H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 35H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 36H
-INX H
-MOV A,M
+CALL GETBIT
 OUT 37H
 RST 1
 
-; 1 s at 1 MHz would be LXI B,0A2C3H - short count for the simulator
-DELAY: LXI B,0010H
+; next bit of the row -> A as 01H or 00H
+; RLC pushes E's leftmost bit into CY, MVI leaves CY alone, ACI adds it
+GETBIT: MOV A,E
+RLC
+MOV E,A
+MVI A,00H
+ACI 00H
+RET
+
+; A = current row -> A = next row: (A << 1) AND (A >> 1)
+; 8085 has no plain shifts: clear CY with ORA A, then rotate through CY
+NEXTROW: MOV B,A
+ORA A
+RAR		; A = row >> 1
+MOV C,A
+MOV A,B
+ORA A
+RAL		; A = row << 1
+ANA C		; keep only bits lit in BOTH shifts
+RET
+
+; row-to-row pause (0200H is watchable at Normal speed)
+DELAY: LXI B,0200H
 DLOOP: DCX B
 MOV A,B
 ORA C
 JNZ DLOOP
 RET
-
-; the picture itself - edit these four lines to change the pattern
-; (each DB needs its own ORG: this simulator restarts every DB at the
-; last ORG address instead of continuing after the previous DB)
-# ORG 2000H
-# DB 01H,01H,01H,01H,01H,01H,01H,00H
-# ORG 2008H
-# DB 00H,01H,01H,01H,01H,01H,00H,00H
-# ORG 2010H
-# DB 00H,00H,01H,01H,01H,00H,00H,00H
-# ORG 2018H
-# DB 00H,00H,00H,01H,00H,00H,00H,00H
