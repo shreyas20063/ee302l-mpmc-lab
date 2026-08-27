@@ -122,8 +122,13 @@ JNZ DLOOP
 RET
 
 ; the picture itself - edit these four lines to change the pattern
+; (each DB needs its own ORG: this simulator restarts every DB at the
+; last ORG address instead of continuing after the previous DB)
 # ORG 2000H
 # DB 01H,01H,01H,01H,01H,01H,01H,00H
+# ORG 2008H
 # DB 00H,01H,01H,01H,01H,01H,00H,00H
+# ORG 2010H
 # DB 00H,00H,01H,01H,01H,00H,00H,00H
+# ORG 2018H
 # DB 00H,00H,00H,01H,00H,00H,00H,00H
