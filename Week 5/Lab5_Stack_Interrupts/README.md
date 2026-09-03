@@ -16,9 +16,17 @@ mandates it, and the other two follow for consistency. Stack at `2700H`.
 
 1. Set simulation speed to **Normal**, `Start From 2000`, Run.
 2. Watch port `01H` count in the Devices tab (row 00, column 1).
-3. **Registers tab → the teal interrupt row → click `R7.5`.** That is the
-   emergency event. Port `02H` (row 00, column 2) blinks five times while
-   port 01H freezes; then counting continues from the paused value.
+3. **Registers tab → the teal interrupt row → click `R7.5` on, then
+   straight back off** (pulse it like a button). That is the emergency
+   event. Port `02H` (row 00, column 2) blinks five times while port 01H
+   freezes; then counting continues from the paused value.
+
+   Simulator finding (03/09): accepting the interrupt does **not** clear
+   the RST 7.5 latch here, so the ISR re-fired forever after its `EI`.
+   Fix in the ISR: `MVI A,18H / SIM` — bit 4 of the SIM byte resets the
+   7.5 flip-flop. Real hardware clears it on acknowledge, but resetting
+   it explicitly is standard practice anyway. It sits *before* `POP PSW`
+   so the restored A is not clobbered.
 4. It never halts by design — Stop when done.
 
 ## Why each program is shaped the way it is

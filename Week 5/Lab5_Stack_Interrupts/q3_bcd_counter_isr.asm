@@ -42,6 +42,8 @@ DCR C
 JNZ BLINK
 POP D
 POP B		; count back exactly where it was
+MVI A,18H	; bit 4 clears the RST 7.5 latch so it cannot re-fire on its own
+SIM		; (done before POP PSW so A is restored afterwards, not wrecked)
 POP PSW
 EI		; interrupts got switched off on entry, switch them back on
 RET
