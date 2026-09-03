@@ -1,51 +1,60 @@
-; Q3 - 2-digit BCD counter on port 01H; RST 7.5 pauses it, blinks port 02H
-; five times, then counting resumes from where it stopped
-; main at 2000H, ISR at 003CH (the RST 7.5 vector), stack at 2700H
-; B holds the count. The ISR saves it on the stack and hands it back untouched
+; Q3: 2-digit BCD counter on port 01H, RST 7.5 pauses it and blinks port 02H 5 times
+; Main program at 2000H, ISR at 003CH, stack at 2700H, count kept in register B
 
 # ORG 2000H
+        LXI SP, 2700H
+        MVI A, 08H          ; MSE=1, unmask RST 7.5
+        SIM
+        MVI B, 00H
+        EI
+MAIN:   CALL TICK
+        JMP MAIN
 
-LXI SP,2700H
-MVI A,08H	; MSE set, RST 7.5 unmasked (same byte as the handout example)
-SIM
-EI
-MVI B,00H
-COUNT: MVI A,08H	; re-assert: masks open, 7.5 reset released (simulator needs this each lap)
-SIM
-MOV A,B
-OUT 01H
-CALL DELAY
-MOV A,B
-ADI 01H
-DAA		; keep it decimal: 09 -> 10, 99 -> 00
-MOV B,A
-JMP COUNT
+; show B, wait, then B = B + 1 in BCD
+TICK:   MOV A, B
+        OUT 01H
+        CALL DELAY
+        MOV A, B
+        CPI 99H
+        JZ ZERO             ; 99 -> 00 done by hand, DAA carry is unreliable here
+        ADI 01H
+        DAA
+        MOV B, A
+        RET
+ZERO:   MVI B, 00H
+        RET
 
-DELAY: LXI D,1000H
-DL: DCX D
-MOV A,D
-ORA E
-JNZ DL
-RET
+; 1000H is for the simulator, about 7A00H gives 0.25 s on a 3 MHz 8085
+DELAY:  LXI D, 1000H
+DLOOP:  DCX D
+        MOV A, D
+        ORA E
+        JNZ DLOOP
+        RET
 
-; interrupt service routine - the CPU lands here when RST 7.5 fires
+; RST 7.5 service routine
 # ORG 003CH
-PUSH PSW
-PUSH B		; the count, safe on the stack
-PUSH D
-MVI C,05H	; five blinks
-BLINK: MVI A,0FFH
-OUT 02H
-CALL DELAY
-MVI A,00H
-OUT 02H
-CALL DELAY
-DCR C
-JNZ BLINK
-POP D
-POP B		; count back exactly where it was
-MVI A,18H	; bit 4 clears the RST 7.5 latch so it cannot re-fire on its own
-SIM		; (before POP PSW so A is restored afterwards, not wrecked)
-POP PSW
-EI		; interrupts got switched off on entry, switch them back on
-RET
+        PUSH PSW
+        PUSH B              ; count goes on the stack
+        PUSH D
+        MVI C, 05H
+BLINK:  MVI A, 0FFH
+        OUT 02H
+        CALL DELAY
+        MVI A, 00H
+        OUT 02H
+        CALL DELAY
+        DCR C
+        JNZ BLINK
+        MVI A, 18H          ; reset the RST 7.5 flip-flop
+        SIM
+        MVI A, 08H          ; simulator keeps bit 4 set, so write it back to 0
+        SIM
+WAIT:   RIM                 ; simulator holds the 7.5 line high till the cell is toggled off
+        ANI 40H
+        JNZ WAIT
+        POP D
+        POP B               ; count comes back
+        POP PSW
+        EI
+        RET

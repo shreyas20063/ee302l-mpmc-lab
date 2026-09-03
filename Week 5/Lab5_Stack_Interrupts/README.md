@@ -14,21 +14,44 @@ mandates it, and the other two follow for consistency. Stack at `2700H`.
 
 ## Running Q3 — firing the interrupt
 
-1. Set simulation speed to **Normal**, `Start From 2000`, Run.
-2. Watch port `01H` count in the Devices tab (row 00, column 1).
-3. **Registers tab → the teal interrupt row → click `R7.5` on, then
-   straight back off** (pulse it like a button). That is the emergency
-   event. Port `02H` (row 00, column 2) blinks five times while port 01H
-   freezes; then counting continues from the paused value.
+1. Assemble, `Start From 2000`, simulation speed **Normal**.
+2. **Before pressing Run, make sure the `R7.5` cell in the Registers panel
+   reads 0.** If it is already 1 when `EI` executes, the simulator jumps
+   to the ISR with nothing on the stack and the run is lost — Stop, set it
+   to 0, Run again.
+3. Run. Devices tab: port `01H` (row 00, column 1) counts `00 01 … 99 00`.
+4. Click `R7.5` (it goes to 1): port `02H` blinks `FF/00` five times while
+   port 01H freezes.
+5. Click `R7.5` again (back to 0): the ISR finishes, port 01H resumes from
+   the frozen value. Leave it at 1 and the count simply stays frozen with
+   the alarm off until you release it.
+6. Repeat 4–5 as often as you like — every click is serviced.
+7. It never halts by design — Stop when done.
 
-   Simulator finding (03/09): accepting the interrupt does **not** clear
-   the RST 7.5 latch here, so the ISR re-fired forever after its `EI`.
-   Fix in the ISR: `MVI A,18H / SIM` then `MVI A,08H / SIM` — bit 4 of
-   the SIM byte resets the 7.5 flip-flop, and the second write releases
-   it (the simulator holds the reset as a level; on real hardware it is
-   a one-shot, and acknowledge clears the latch anyway). Both sit
-   *before* `POP PSW` so the restored A is not clobbered.
-4. It never halts by design — Stop when done.
+### What this simulator actually does on RST 7.5 (found by decompiling the jar)
+
+- **It does not push a return address.** `interruptProcess()` just sets
+  `IE = 0` and `PC = 003CH`. Only CALL/RST opcodes push. So an ISR's `RET`
+  pops whatever happens to be on top of the stack. This is why a textbook
+  ISR ending in `EI / RET` re-entered forever: `RET` popped `0000`, the
+  finger walked through NOPs from `0000H` straight back into `003CH`.
+  Design response: the main loop is `MAIN: CALL TICK / JMP MAIN`, all work
+  inside subroutines, so the stack top is *always* a valid return address.
+  On real hardware `RET` returns to the interrupted instruction; here it
+  returns from the innermost subroutine and merely shortens one tick.
+- **The `R7.5` cell is a level, not a latch**, never cleared on
+  acknowledge, and `RIM` bit 6 reports it directly. `SIM` bit 4 sets a
+  sticky reset that blocks RST 7.5 until another `SIM` clears it. Hence the
+  ISR tail: `SIM 18H` (textbook flip-flop reset), `SIM 08H` (release the
+  simulator's sticky bit), then `RIM / ANI 40H / JNZ` to wait for the
+  toggle to be released, then pops, `EI`, `RET`.
+- **Its `DAA` checks the high nibble of the *original* A**, so `99H + 01H`
+  gives `A0H`, not `00H`. The 99 → 00 wrap is done explicitly with
+  `CPI 99H`; `DAA` handles the other 99 increments (CY is always 0 before
+  it, so the documented CY bug never triggers).
+- Normal speed repaints every 10,000 T-states; a too-small delay aliases
+  against that and the display appears to skip values (the "only odd
+  numbers" symptom). `1000H` iterations ≈ 100k T-states per count.
 
 ## Why each program is shaped the way it is
 
@@ -46,18 +69,17 @@ That is the entire point of the question in one experiment.
 
 **Q3 — the interrupt round trip.**
 - `MVI A,08H / SIM` sets the mask-enable bit and unmasks RST 7.5 (the
-  handout's byte). `EI` turns interrupts on globally. Both are needed.
-- `ADI 01H / DAA` keeps the count decimal. `DAA` fixes `09+1 = 0AH` to
-  `10H`, and `99+1 = 9AH` to `00H`. (The simulator's known DAA carry bug
-  only affects cases where CY is already set before `DAA`; `ADI 01H` can
-  never carry, so it doesn't bite here.)
-- The ISR sits at `003CH` because that is where the CPU jumps on RST 7.5
-  — a fixed vector, same idea as `RST 1` → `0008H`.
-- `PUSH PSW / PUSH B / PUSH D` on entry, mirrored `POP`s on exit: the
-  ISR saves everything it touches. B is the count — the "save the count
-  on the stack" requirement is literally `PUSH B`.
+  handout's byte); `EI` turns interrupts on globally. Both are needed.
+- Counting lives in `TICK`: show B, wait, `ADI 01H / DAA` to stay decimal,
+  with the 99 → 00 wrap done by `CPI 99H` (see simulator note above).
+- The ISR sits at `003CH` because that is where the CPU jumps on RST 7.5.
+- `PUSH PSW / PUSH B / PUSH D` on entry, mirrored `POP`s on exit: the ISR
+  saves everything it touches. "Save the count on the stack" is `PUSH B`.
 - `EI` before `RET`: the CPU disables interrupts when it accepts one.
-  Forget this and the second emergency is ignored forever.
+- Deviations from the handout example, all forced by this simulator:
+  `SIM` before `EI`; main loop calls a subroutine instead of `JMP MAIN`;
+  ISR pushes PSW/B/D not just B; ISR resets and releases the 7.5 flip-flop
+  and polls `RIM` before returning.
 
 ## New instructions this week
 
@@ -67,6 +89,8 @@ That is the entire point of the question in one experiment.
 | `POP B` | read B and C back, SP += 2 |
 | `PUSH PSW` / `POP PSW` | same for A + flags |
 | `EI` | enable interrupts |
-| `SIM` | write A into the interrupt mask register (bit 3 = mask-set-enable, bits 0–2 = masks for 5.5/6.5/7.5, 0 = unmasked) |
+| `SIM` | write A into the interrupt mask register (bit 3 = mask-set-enable, bits 0–2 = masks for 5.5/6.5/7.5, 0 = unmasked, bit 4 = reset the 7.5 flip-flop) |
+| `RIM` | read interrupt status into A (bit 6 = RST 7.5 pending, bit 3 = IE) |
+| `CPI 99H` | compare A with a constant |
 | `DAA` | decimal-adjust A after a BCD add |
 | `ADI 01H` | add immediate |
