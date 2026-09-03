@@ -33,8 +33,11 @@ One folder per lab week, one sub-folder per experiment.
 | 3 | Lab 3 E2 — divide by repeated subtraction | written, to verify in sim |
 | 3 | Lab 3 E3 — safe-limit detection (branching) | written, to verify in sim |
 | 4 | ADC threshold filter (arrays, CPI/STAX) | written, to verify in sim |
-| 4 | LED pyramid (OUT, CALL/RET, 1 s delay) | written, to verify in sim |
-| 4 | Traffic light controller (table-driven, forever loop) | written, to verify in sim |
+| 4 | LED pyramid (computed, OUT, CALL/RET, delay) | done, verified in simulator |
+| 4 | Traffic light controller (table-driven, auto-stop) | done, verified in simulator |
+| 5 | Q1 — array reversal via PUSH/POP | written, to verify in sim |
+| 5 | Q2 — subroutine add, BC preserved on stack | written, to verify in sim |
+| 5 | Q3 — BCD counter + RST 7.5 ISR | written, to verify in sim |
 
 ## Getting set up on a new machine
 

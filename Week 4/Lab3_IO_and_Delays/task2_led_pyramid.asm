@@ -116,8 +116,7 @@ RAL		; A = row << 1
 ANA C		; keep only bits lit in BOTH shifts
 RET
 
-; row-to-row pause. The traffic light waits seconds x 0200H per state;
-; this waits only once per row, so the count itself must be bigger
+; row-to-row pause (0200H is watchable at Normal speed)
 DELAY: LXI B,0A00H
 DLOOP: DCX B
 MOV A,B
