@@ -23,10 +23,11 @@ mandates it, and the other two follow for consistency. Stack at `2700H`.
 
    Simulator finding (03/09): accepting the interrupt does **not** clear
    the RST 7.5 latch here, so the ISR re-fired forever after its `EI`.
-   Fix in the ISR: `MVI A,18H / SIM` — bit 4 of the SIM byte resets the
-   7.5 flip-flop. Real hardware clears it on acknowledge, but resetting
-   it explicitly is standard practice anyway. It sits *before* `POP PSW`
-   so the restored A is not clobbered.
+   Fix in the ISR: `MVI A,18H / SIM` then `MVI A,08H / SIM` — bit 4 of
+   the SIM byte resets the 7.5 flip-flop, and the second write releases
+   it (the simulator holds the reset as a level; on real hardware it is
+   a one-shot, and acknowledge clears the latch anyway). Both sit
+   *before* `POP PSW` so the restored A is not clobbered.
 4. It never halts by design — Stop when done.
 
 ## Why each program is shaped the way it is
