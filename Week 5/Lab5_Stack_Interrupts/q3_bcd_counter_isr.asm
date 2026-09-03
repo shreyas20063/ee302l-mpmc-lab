@@ -10,7 +10,9 @@ MVI A,08H	; MSE set, RST 7.5 unmasked (same byte as the handout example)
 SIM
 EI
 MVI B,00H
-COUNT: MOV A,B
+COUNT: MVI A,08H	; re-assert: masks open, 7.5 reset released (simulator needs this each lap)
+SIM
+MOV A,B
 OUT 01H
 CALL DELAY
 MOV A,B
@@ -43,9 +45,7 @@ JNZ BLINK
 POP D
 POP B		; count back exactly where it was
 MVI A,18H	; bit 4 clears the RST 7.5 latch so it cannot re-fire on its own
-SIM
-MVI A,08H	; release the reset again, or the latch stays held and never re-arms
-SIM		; (both before POP PSW so A is restored afterwards, not wrecked)
+SIM		; (before POP PSW so A is restored afterwards, not wrecked)
 POP PSW
 EI		; interrupts got switched off on entry, switch them back on
 RET
