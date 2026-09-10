@@ -10,7 +10,7 @@ week. Stack at `2700H`.
 | Task | File | Ports / memory |
 |---|---|---|
 | 1 | `task1_railway_crossing.asm` | in `80H` sensor, out `82H` gate, count `9000H`, ISR at `003CH` |
-| 2 | `task2_tank_level.asm` | readings `9000H–9009H`, pump `2000H`, alarm `2001H`, counts `3000H–3003H`, ISR via `RST 7` at `0038H` |
+| 2 | `task2_tank_level.asm` | readings `9000H–9009H`, current pump `2000H`, pump table `2002H–200BH`, alarm `2001H`, counts `3000H–3003H`, ISR via `RST 7` at `0038H` |
 
 ## Task 1 — running it
 
@@ -36,12 +36,14 @@ cleared live.
 Ten tanks, each with its own pump, all joined by an overflow pipe at the
 top. The loop visits one tank per iteration:
 
-- `2000H` is **the pump of the tank being processed**: LOW → on, HIGH →
-  off, NORMAL → left as it is.
+- Each tank's pump state lives in a table, `2002H–200BH` (tank 1 at
+  `2002H`). `2000H` mirrors **the pump of the tank being processed**:
+  LOW → on, HIGH → off, NORMAL → that tank's pump keeps its own state.
 - After tank *k*, the **running average of the first k tanks** is computed
   (stored at `3003H`). If it is above 80% of full scale, the overflow
-  interrupt fires immediately — this tank's pump off, alarm `FF` for a
-  second, `00` — and monitoring continues with tank *k+1*.
+  interrupt fires immediately — **every pump off** (the whole table is
+  cleared), alarm `FF` for a second, `00` — and monitoring continues with
+  tank *k+1*.
 - After tank 10 the cycle restarts.
 
 ## Task 2 — running it
@@ -54,7 +56,8 @@ Assemble, `Start From 7000`, Run. It cycles forever, so Stop to read:
 | `3001H` normal count | `05` |
 | `3002H` high count | `02` |
 | `3003H` running average (after tank 10) | `05` |
-| `2000H` pump of tank 10 | `01` (tank 10 is NORMAL, so tank 9's ON state is left in place) |
+| `2000H` pump of tank 10 | `00` (tank 10 is NORMAL, so its own pump stays off) |
+| `2002H–200BH` pump table | `01 00 00 01 00 00 00 00 01 00` — on for the three LOW tanks (1, 4, 9) |
 | `2001H` alarm | `00` |
 
 With the shipped data the running average never crosses 80%. To see the
@@ -119,9 +122,13 @@ decision keeps the fractional part: an average of 8.5 correctly alarms.
 The integer running average is also computed (repeated subtraction of
 *k*) and stored at `3003H` because the handout asks for it.
 
-**Task 2: pump hysteresis.** LOW turns it on, HIGH turns it off, NORMAL
-leaves it alone — so the pump's final state depends on sample order, and
-"reset to zero" happens once at program start, not every cycle.
+**Task 2: per-tank pump memory.** Ten pumps need ten states, so the
+controller keeps a table (`2002H–200BH`) and `2000H` shows the entry for
+the tank in hand. LOW writes on, HIGH writes off, NORMAL reads the entry
+back unchanged — hysteresis per tank, not carried across neighbours.
+"Reset to zero" (`ALLOFF`) runs once at start, and again inside the ISR,
+because an overflowing group must stop *all* filling, not just the tank
+that happened to tip the average.
 
 **Task 2: register budget.** The three counts live in memory
 (`3000H–3002H`, updated with `LDA / INR / STA`) rather than in registers,
