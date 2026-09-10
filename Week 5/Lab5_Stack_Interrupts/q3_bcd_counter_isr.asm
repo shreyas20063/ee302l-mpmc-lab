@@ -1,60 +1,53 @@
-; Q3: 2-digit BCD counter on port 01H, RST 7.5 pauses it and blinks port 02H 5 times
-; Main program at 2000H, ISR at 003CH, stack at 2700H, count kept in register B
-
+; Q3: 2-digit BCD counter on port 01H, paused by RST 7.5 which blinks port 02H 5 times
+; Main code 2000H, ISR at 003CH, stack at 2700H, count kept in register C
 # ORG 2000H
 LXI SP,2700H
-MVI A,08H	; MSE=1, unmask RST 7.5
+MVI C,00H
+MVI A,08H ; MSE=1, unmask RST 7.5
 SIM
-MVI B,00H
 EI
-MAIN: CALL TICK
-JMP MAIN
-
-; show B, wait, then B = B + 1 in BCD
-TICK: MOV A,B
+MAIN:MOV A,C
 OUT 01H
 CALL DELAY
-MOV A,B
-CPI 99H
-JZ ZERO	; 99 -> 00 done by hand, DAA carry is unreliable here
-ADI 01H
+MOV A,C
+CPI 99H ; wrap 99 -> 00 by hand (simulator DAA gets this case wrong)
+JNZ NEXT
+MVI C,00H
+JMP MAIN
+NEXT:ADI 01H
 DAA
-MOV B,A
+MOV C,A
+JMP MAIN
+DELAY:MVI D,10H ; ~4000 loops, sized for the simulator (real 3 MHz 8085 needs ~100x more)
+DLY1:MVI E,0FFH
+DLY2:DCR E
+JNZ DLY2
+DCR D
+JNZ DLY1
 RET
-ZERO: MVI B,00H
-RET
-
-; 1000H is for the simulator, about 7A00H gives 0.25 s on a 3 MHz 8085
-DELAY: LXI D,1000H
-DLOOP: DCX D
-MOV A,D
-ORA E
-JNZ DLOOP
-RET
-
-; RST 7.5 service routine
 # ORG 003CH
-PUSH PSW
-PUSH B	; count goes on the stack
+ISR:PUSH PSW
+PUSH B ; count (C) saved on stack
 PUSH D
-MVI C,05H
-BLINK: MVI A,0FFH
+MVI B,05H
+BLINK:MVI A,0FFH
 OUT 02H
 CALL DELAY
 MVI A,00H
 OUT 02H
 CALL DELAY
-DCR C
+DCR B
 JNZ BLINK
-MVI A,18H	; reset the RST 7.5 flip-flop
+WAIT:MVI A,18H ; reset the RST 7.5 flip-flop
 SIM
-MVI A,08H	; simulator keeps bit 4 set, so write it back to 0
+MVI A,08H ; simulator keeps the reset bit until written back to 0
 SIM
-WAIT: RIM	; simulator holds the 7.5 line high till the cell is toggled off
-ANI 40H
+RIM
+ANI 40H ; wait until RST 7.5 input is released
 JNZ WAIT
 POP D
-POP B	; count comes back
+POP B ; count restored into C
 POP PSW
+LXI SP,2700H ; simulator does not push a return address on interrupt, so no RET
 EI
-RET
+JMP MAIN
