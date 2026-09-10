@@ -39,7 +39,7 @@ One folder per lab week, one sub-folder per experiment.
 | 5 | Q2 — subroutine add, BC preserved on stack | written, to verify in sim |
 | 5 | Q3 — BCD counter + RST 7.5 ISR | done, verified at the bench |
 | 6 | Lab 05 T1 — railway crossing (RST 7.5, IN/OUT) | done, verified in simulator |
-| 6 | Lab 05 T2 — tank level controller (classify, average, RST 7) | written, to verify in sim |
+| 6 | Lab 05 T2 — tank level controller (running average, RST 7) | done, verified in simulator |
 
 ## Getting set up on a new machine
 
