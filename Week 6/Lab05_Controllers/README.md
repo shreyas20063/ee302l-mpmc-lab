@@ -31,6 +31,19 @@ cleared live.
 6. Next train: click `R7.5` on again; `9000H` → `02`, and so on. To change
    the sensor, Stop first, edit port 80H, Run again.
 
+## Task 2 — the model, as clarified by the TAs
+
+Ten tanks, each with its own pump, all joined by an overflow pipe at the
+top. The loop visits one tank per iteration:
+
+- `2000H` is **the pump of the tank being processed**: LOW → on, HIGH →
+  off, NORMAL → left as it is.
+- After tank *k*, the **running average of the first k tanks** is computed
+  (stored at `3003H`). If it is above 80% of full scale, the overflow
+  interrupt fires immediately — this tank's pump off, alarm `FF` for a
+  second, `00` — and monitoring continues with tank *k+1*.
+- After tank 10 the cycle restarts.
+
 ## Task 2 — running it
 
 Assemble, `Start From 7000`, Run. It cycles forever, so Stop to read:
@@ -40,15 +53,29 @@ Assemble, `Start From 7000`, Run. It cycles forever, so Stop to read:
 | `3000H` low count | `03` |
 | `3001H` normal count | `05` |
 | `3002H` high count | `02` |
-| `3003H` average | `05` |
-| `2000H` pump | `01` (last sample `06` was NORMAL, so the ON from `00` before it stays) |
+| `3003H` running average (after tank 10) | `05` |
+| `2000H` pump of tank 10 | `01` (tank 10 is NORMAL, so tank 9's ON state is left in place) |
 | `2001H` alarm | `00` |
 
-To see the overflow path, load a high data set and rerun:
-`# DB 09H,0AH,0AH,09H,08H` / `# DB 0AH,09H,0AH,09H,0AH` → sum 94, average
-`09`, counts `00/01/09`, pump ends `00`, and every cycle the alarm goes
-`FF` for a second then `00`. (Stop mid-cycle to catch `2001H = FF`, or
-watch it in the Memory tab at Normal speed.)
+With the shipped data the running average never crosses 80%. To see the
+overflow path, load this instead — it alarms after tanks 1 and 2, then
+settles:
+
+```
+# ORG 9000H
+# DB 0AH,0AH,03H,04H,05H
+# ORG 9005H
+# DB 06H,07H,08H,09H,0AH
+```
+
+Running sums 10, 20, 23, 27, 32, 38, 45, 53, 62, 72 against the 80% line
+8·k = 8, 16, 24 … 80 → above it only at k = 1 and 2.
+
+**To watch an alarm happen:** put a breakpoint (`#`) on the `RST 7` line.
+Each time it pauses there, `3003H` holds the average that tripped it and
+`2000H` the pump about to be forced off; Continue, then Stop a moment
+later to catch `2001H = FF` (or watch it in the Memory tab at Normal
+speed).
 
 ## Design notes — the parts a TA will ask about
 
@@ -84,19 +111,24 @@ where a `JMP ALARM` sits (vectors are 8 bytes apart; a jump keeps the
 handler out of the table). Because `RST` *does* push in this simulator,
 the handler's `RET` is a genuine return — no tricks needed.
 
-**Task 2: threshold without division.** Average > 80% of full scale
-(`0AH`) means sum > 80, i.e. sum ≥ 81 → `CPI 51H / JC START`. The
-integer average is still computed (repeated subtraction of 10) and stored
-at `3003H` because the handout asks for it. Using the sum for the
+**Task 2: the 80% test without fractions.** After *k* tanks, average >
+80% of `0AH` means average > 8, i.e. sum > 8·k. The program computes
+8·k as `k` rotated left three times (`RLC` ×3 — a multiply by 8 that never
+overflows since 8·10 = 80) and compares it with the running sum, so the
 decision keeps the fractional part: an average of 8.5 correctly alarms.
+The integer running average is also computed (repeated subtraction of
+*k*) and stored at `3003H` because the handout asks for it.
 
 **Task 2: pump hysteresis.** LOW turns it on, HIGH turns it off, NORMAL
 leaves it alone — so the pump's final state depends on sample order, and
 "reset to zero" happens once at program start, not every cycle.
 
-**Task 2: loop termination without a counter register.** B, C, D, E are
-all in use (three counts and the sum), so the loop ends by checking the
-pointer: `MOV A,L / CPI 0AH` — the low byte of HL walks `00` to `0A`.
+**Task 2: register budget.** The three counts live in memory
+(`3000H–3002H`, updated with `LDA / INR / STA`) rather than in registers,
+which frees B and C for the per-iteration division. The loop ends by
+checking the pointer: `MOV A,L / CPI 0AH` — the low byte of HL walks `00`
+to `0A`, and `L + 1` doubles as the tank count *k*. The ISR pushes the D
+pair because `DELAY` uses DE and E is the running sum.
 
 ## New instructions this week
 
