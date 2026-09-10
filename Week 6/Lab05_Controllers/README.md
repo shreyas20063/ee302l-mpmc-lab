@@ -20,7 +20,9 @@ cleared live.
 
 1. Optional: type `01` into port `80H` (row 80, column 0) while stopped —
    a train is sitting at the sensor. Leave it `00` for the quick case.
-2. Assemble, `Start From 7000`, Normal speed. **`R7.5` must read 0 before Run.**
+2. Assemble, `Start From 7000`, Normal speed. (`R7.5` left at 1 from a
+   previous run is now harmless — the program disables interrupts first
+   and only enables them once a return address is on the stack.)
 3. Run. Port `82H` (row 80, column 2) = `00`, gate open.
 4. Click `R7.5` on. Port 82H → `01` (gate closed), `9000H` → `01`.
    - sensor `00`: gate reopens after the 1 s delay
@@ -50,17 +52,17 @@ watch it in the Memory tab at Normal speed.)
 
 ## Design notes — the parts a TA will ask about
 
-**Task 1: how `RET` is made honest in this simulator.** Last week we found
-this simulator does not push a return address on RST 7.5, so an ISR's
-`RET` pops whatever is on the stack. The handout demands `RET`. Solution:
-the main program is `MAIN: CALL MONITOR / JMP MAIN` with
-`MONITOR: JMP MONITOR`. The call parks a return address on the stack and
-the infinite monitoring loop lives *inside* the subroutine, so the ISR's
-`RET` always finds that address, lands on `JMP MAIN`, and the stack is
-re-primed by the next `CALL`. On real hardware this is simply correct
-code — `RET` returns to the interrupted spot. The cost: if `R7.5` is
-already 1 when `EI` runs, the interrupt fires before the first `CALL` and
-the stack is empty — hence the "must read 0 before Run" rule.
+**Task 1: how `RET` is made honest in this simulator.** This simulator
+does not push a return address on RST 7.5 (verified in its source — see
+below), so an ISR's `RET` pops whatever is on the stack. The handout
+demands `RET`. Solution: `MAIN: CALL MONITOR / JMP MAIN`, with the
+infinite monitoring loop *inside* `MONITOR`. The call parks a return
+address; `EI` is issued only inside `MONITOR`, after that address exists;
+so whenever the ISR's `RET` runs it finds a valid address, lands on
+`JMP MAIN`, and the next `CALL` re-primes the stack. `DI` is the very
+first instruction so state left over from an earlier run (the simulator
+does not reset the CPU between runs) cannot fire an interrupt early. On
+real hardware all of this is simply correct, ordinary code.
 
 **Task 1: the ISR tail.** `SIM 18H` (reset the 7.5 flip-flop — textbook),
 `SIM 08H` (release the simulator's sticky reset bit), then
@@ -104,3 +106,33 @@ pointer: `MOV A,L / CPI 0AH` — the low byte of HL walks `00` to `0A`.
 | `RST 7` | software interrupt: push PC, jump to `0038H` |
 | `SUI 0AH` | subtract immediate |
 | `RIM` | read interrupt status; bit 6 = RST 7.5 line pending |
+
+## How this simulator really handles interrupts (from its source, `Matrix.java` / `Assembler.java`)
+
+Read from <https://github.com/8085simulator/8085simulator>, 10/09/2026.
+
+- `interruptProcess()` runs after **every** instruction. For RST 7.5 it
+  is literally `if(IE==1 && R75==1 && RR75==0 && !(M75==1 && MSE==1))
+  { IE=0; PC=0x003C; }` — **no push of PC**. `CALL` and `RST n` do push.
+- `R75` is the Registers-panel cell, toggled only by clicking it; the CPU
+  never clears it. It is a **level**. `RIM` bit 6 returns it directly.
+- `SIM` stores bit 4 into `RR75`, which stays until the next `SIM`. While
+  it is 1, RST 7.5 is blocked. Masks are stored regardless of MSE, but
+  only block when both `M75` and `MSE` are 1.
+- `EI` sets `IE=1` immediately, and `interruptProcess()` runs right after
+  it — so with `R75` still 1 the ISR re-enters *before* `RET` executes.
+  Hence the `RIM / ANI 40H / JNZ` wait for the cell to be toggled off.
+- Run does **not** reset the CPU: `IE`, `RR75`, `R75`, registers and
+  memory persist between runs. *Settings → Clear Memory* makes a fresh
+  CPU.
+- Repaint: at Normal speed the Registers panel refreshes every
+  instruction, but Memory and I/O tables only when the clock-cycle
+  counter is an **exact** multiple of 10,000 — which is why the port grid
+  freezes for stretches and catches up on Stop. Ultimate refreshes only on
+  halt; Step-by-step refreshes every step.
+- **Breakpoint:** click the `√` in the `*` column of a row in the
+  Assembler workspace so it becomes `#`. The run pauses there with
+  Continue/Forward/Backward available, and the I/O grid is editable.
+- `DAA` tests the high nibble of the *original* A and XORs the new carry
+  with the old one: `99H+01H` → `A0H`; wrap BCD counters explicitly.
+- The default "stop at mnemonic" is `RST 1`.

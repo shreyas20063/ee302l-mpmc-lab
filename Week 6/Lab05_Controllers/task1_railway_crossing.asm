@@ -3,15 +3,16 @@
 ; train count at 9000H, main at 7000H, ISR at 003CH, stack at 2700H
 
 # ORG 7000H
+DI		; nothing may fire until the stack is ready
 LXI SP,2700H
 MVI A,00H
 OUT 82H		; gate open to begin with
-MVI A,08H	; unmask RST 7.5
-SIM
-EI
 MAIN: CALL MONITOR	; MONITOR never returns on its own, only through the ISR's RET
 JMP MAIN
-MONITOR: JMP MONITOR	; infinite monitoring loop, return address parked on the stack
+MONITOR: MVI A,08H	; unmask RST 7.5 (also clears a leftover reset bit)
+SIM
+EI		; enabled only now, with a return address already on the stack
+IDLE: JMP IDLE	; infinite monitoring loop
 
 ; 1 s at 1 MHz would be LXI D,0A2C3H (24 T-states a lap) - short count for the simulator
 DELAY: LXI D,0400H
