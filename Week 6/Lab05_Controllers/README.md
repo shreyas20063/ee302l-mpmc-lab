@@ -14,14 +14,20 @@ week. Stack at `2700H`.
 
 ## Task 1 — running it
 
-1. Assemble, `Start From 7000`, Normal speed. **`R7.5` must read 0 before Run.**
-2. Run. Devices tab: port `82H` (row 80, column 2) = `00`, gate open.
-3. A train arrives: set port `80H` (row 80, column 0) to `01`, then click
-   `R7.5` on. Port 82H → `01` (gate closed), `9000H` → `01` in the Memory tab.
-4. After the 1 s delay the ISR polls the sensor. Train passes: set port
-   `80H` back to `00`. Port 82H → `00` (gate open).
+The I/O grid only accepts edits while the CPU is stopped, so the sensor
+is set **before** Run and the ISR has a poll limit for when it cannot be
+cleared live.
+
+1. Optional: type `01` into port `80H` (row 80, column 0) while stopped —
+   a train is sitting at the sensor. Leave it `00` for the quick case.
+2. Assemble, `Start From 7000`, Normal speed. **`R7.5` must read 0 before Run.**
+3. Run. Port `82H` (row 80, column 2) = `00`, gate open.
+4. Click `R7.5` on. Port 82H → `01` (gate closed), `9000H` → `01`.
+   - sensor `00`: gate reopens after the 1 s delay
+   - sensor `01`: gate stays closed through ten more polls, then reopens
 5. Click `R7.5` off — the ISR returns to the main loop.
-6. Next train: repeat 3–5; `9000H` → `02`, and so on.
+6. Next train: click `R7.5` on again; `9000H` → `02`, and so on. To change
+   the sensor, Stop first, edit port 80H, Run again.
 
 ## Task 2 — running it
 
@@ -61,9 +67,12 @@ the stack is empty — hence the "must read 0 before Run" rule.
 `RIM / ANI 40H / JNZ` waits for the toggle to be released so the ISR is
 not re-entered the instant `EI` runs. On hardware the wait exits at once.
 
-**Task 1: gate logic.** `IN 80H / ORA A / JNZ WAIT` keeps the gate closed
-while the sensor reads anything but `00`. Count increments *before*
-closing, so the count reflects arrivals even if a train sits there.
+**Task 1: gate logic.** The ISR polls `IN 80H` continuously as required
+and opens the gate the moment it reads `00`. It also caps the polling at
+ten rounds (`MVI B,0AH / DCR B / JNZ`): on real hardware that is stuck-
+sensor recovery; in the simulator it is what lets the demo finish, since
+port cells cannot be edited during a free run. Count increments *before*
+closing, so it reflects arrivals even if a train sits there.
 
 **Task 2: "generate an interrupt" from software.** The overflow condition
 is computed by the program, so no external line can raise it. The 8085's
