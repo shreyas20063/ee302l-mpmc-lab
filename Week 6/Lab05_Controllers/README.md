@@ -137,6 +137,16 @@ checking the pointer: `MOV A,L / CPI 0AH` — the low byte of HL walks `00`
 to `0A`, and `L + 1` doubles as the tank count *k*. The ISR pushes the D
 pair because `DELAY` uses DE and E is the running sum.
 
+**Task 2: why the pump table is addressed through HL, not `STAX B`.**
+The simulator's `STAX`/`LDAX` are broken (open issue #1 on its GitHub:
+the address is computed as `B << (8+C)` because of a Java precedence
+bug), and for `C ≥ 05` that indexes past the 64 K array and **kills the
+run thread silently** — registers freeze while the Stop button stays up.
+So each branch saves HL, points it at `2002H + tank` (`MVI H,20H / INR L /
+INR L`), reads or writes with `MOV`, and restores HL. `MOV M,r` is also
+used in `ALLOFF` instead of `MVI M`, staying within instructions proven
+to work here.
+
 ## New instructions this week
 
 | Instruction | Meaning |
@@ -175,3 +185,6 @@ Read from <https://github.com/8085simulator/8085simulator>, 10/09/2026.
 - `DAA` tests the high nibble of the *original* A and XORs the new carry
   with the old one: `99H+01H` → `A0H`; wrap BCD counters explicitly.
 - The default "stop at mnemonic" is `RST 1`.
+- `STAX B`/`STAX D`/`LDAX` are miscomputed (`B<<8+C` precedence bug,
+  issue #1) — avoid them; an out-of-range index kills the run thread with
+  no error shown.
