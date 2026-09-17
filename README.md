@@ -40,6 +40,9 @@ One folder per lab week, one sub-folder per experiment.
 | 5 | Q3 — BCD counter + RST 7.5 ISR | done, verified at the bench |
 | 6 | Lab 05 T1 — railway crossing (RST 7.5, IN/OUT) | done, verified in simulator |
 | 6 | Lab 05 T2 — tank level controller (running average, RST 7) | done, verified in simulator |
+| 7 | Lab 06 Q1 — 8051 arithmetic (ADD, SUBB, MUL, DIV) | done, verified with s51 |
+| 7 | Lab 06 Q2 — 8051 logical (ANL, ORL, XRL, CPL) | done, verified with s51 |
+| 7 | Lab 06 Q3 — 8051 block move (@R0/@R1, DJNZ) | done, verified with s51 |
 
 ## Getting set up on a new machine
 
