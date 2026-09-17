@@ -26,3 +26,11 @@ settings.dat
 # --- OneDrive sync conflicts -------------------------------------------------
 *-conflict-*
 *conflicted copy*
+
+# MCU 8051 IDE build output
+*.adf
+*.bin
+*.hex
+*.lst
+*~
+*.mcu8051ide
