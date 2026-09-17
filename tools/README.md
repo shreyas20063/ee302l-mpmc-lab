@@ -20,7 +20,7 @@ Write `.asm`, *File → Save Assembly language code → Save Mnemonics*, then
 |---|---|---|---|
 | C compiler | SDCC (via MCU 8051 IDE) | `sdcc` 4.6.0 | works |
 | Assembler | MCU 8051 IDE | `sdas8051` | works, **different syntax** |
-| IDE + simulator | MCU 8051 IDE | *none* | no macOS build |
+| IDE + simulator | MCU 8051 IDE | MCU 8051 IDE 1.4.9 in Docker | works, see below |
 | Flasher | Atmel FLIP | `dfu-programmer` 1.1.0 | installed, untested on hardware |
 
 ### Building
@@ -35,6 +35,20 @@ Both paths were verified end-to-end and produce valid Intel HEX.
 Templates for each are in `tools/templates/`.
 
 ### The assembly syntax trap
+
+### MCU 8051 IDE in Docker
+
+No macOS build exists, so the real IDE runs in an Ubuntu 24.04 desktop container
+(`tiryoh/ros2-desktop-vnc:jazzy` + `apt install mcu8051ide`), shown in the browser
+over noVNC. Double-click `tools/MCU 8051 IDE.command`; this folder appears inside
+at `/home/ubuntu/lab`, so the IDE edits the repo files directly.
+
+Rebuild from scratch:
+
+```bash
+docker run -d --name mcu8051ide -p 6080:80 --shm-size=512m -v "$PWD":/home/ubuntu/lab tiryoh/ros2-desktop-vnc:jazzy
+docker exec mcu8051ide bash -c 'apt-get update && apt-get install -y mcu8051ide'
+```
 
 `sdas8051` uses **ASxxxx** syntax; MCU 8051 IDE uses **Intel/ASEM-51**. The
 deck's Week-1 listing fails to assemble here verbatim — five errors on `org`,
