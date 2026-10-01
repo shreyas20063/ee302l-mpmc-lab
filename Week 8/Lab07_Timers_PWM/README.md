@@ -100,3 +100,24 @@ Simulator → Stopwatch to time the P2.0 edges, or read the Time field.
 3. FLIP: Settings → Communication → USB → Open. Status shows "USB ON".
 4. File → Load HEX file → the `.hex` the IDE generated.
 5. Run (Erase, Blank check, Program, Verify all green), then press RESET.
+
+## Flashing from this Mac (no FLIP needed)
+
+The AT89C5131A boot loader speaks USB DFU, which `dfu-programmer` (Homebrew)
+supports directly. `.hex` files here were built with `sdas8051` + `packihx`
+and are plain Intel HEX, the same format FLIP loads.
+
+```bash
+tools/flash51.sh "Week 8/Lab07_Timers_PWM/ex1_timer0_pattern.asm"
+```
+
+Board sequence first (same as for FLIP): USB switch DETACH → hold BOOT →
+tap RESET → release BOOT → USB switch ATTACH. The script checks for the
+boot loader, erases, flashes, and tells you to press RESET.
+
+**Clock caveat:** the exercises say 12 MHz, but the Pt-51 has a **24 MHz**
+crystal. In the default (X1) mode one machine cycle is then 0.5 µs, so on the
+board every delay runs twice as fast: Ex 1/Ex 2 step every 0.5 s, Ex 3 comes
+out at ≈2 kHz. The submitted code follows the 12 MHz spec; for true 1 s and
+1 kHz on the board change `MOV R2,#14H` → `#28H` (40 overflows) and
+`MOV R0,#78H` → `#0F0H` (240 laps per slot).
