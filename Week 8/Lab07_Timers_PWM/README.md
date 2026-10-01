@@ -83,8 +83,8 @@ breakpoints on the port writes and the "Simulated … sec" readout:
 
 | Program | Observed |
 |---|---|
-| Ex 1 | P1 = 10, 20, 40, 80, 10 … with 1.000 s between writes |
-| Ex 2 | with P1.3 held low, P1.4 toggles every 1.000 s |
+| Ex 1 | P1 = 10, 20, 40, 80, 10 … with 1.000 s between writes; `_24mhz` build walks LED1–LED4 at 1 s on the Pt-51 |
+| Ex 2 | with P1.3 held low, P1.4 toggles every 1.000 s; `_24mhz` build on the Pt-51: SW4 on → LED1 toggles each second, off → freezes (switch on = pin low, as coded) |
 | Ex 3 (50 %) | 499 µs high, 499 µs low |
 | Blink | 130.8 ms on, 130.8 ms off |
 
@@ -119,5 +119,5 @@ boot loader, erases, flashes, and tells you to press RESET.
 crystal. In the default (X1) mode one machine cycle is then 0.5 µs, so on the
 board every delay runs twice as fast: Ex 1/Ex 2 step every 0.5 s, Ex 3 comes
 out at ≈2 kHz. The submitted code follows the 12 MHz spec; for true 1 s and
-1 kHz on the board change `MOV R2,#14H` → `#28H` (40 overflows) and
+1 kHz on the board use the `*_24mhz.asm` copies, which change `MOV R2,#14H` → `#28H` (40 overflows) and
 `MOV R0,#78H` → `#0F0H` (240 laps per slot).
