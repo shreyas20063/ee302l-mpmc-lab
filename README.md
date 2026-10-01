@@ -43,6 +43,10 @@ One folder per lab week, one sub-folder per experiment.
 | 7 | Lab 06 Q1 — 8051 arithmetic (ADD, SUBB, MUL, DIV) | done, verified in MCU 8051 IDE + s51 |
 | 7 | Lab 06 Q2 — 8051 logical (ANL, ORL, XRL, CPL) | done, verified in MCU 8051 IDE + s51 |
 | 7 | Lab 06 Q3 — 8051 block move (@R0/@R1, DJNZ) | done, verified in MCU 8051 IDE + s51 |
+| 8 | Lab 07 — LED blink on P1 (asm + C) | done, verified with s51 |
+| 8 | Lab 07 Ex1 — Timer 0 mode 1, 1 s LED pattern | done, verified with s51 |
+| 8 | Lab 07 Ex2 — Timer 1 mode 1, switch-gated toggle | done, verified with s51 |
+| 8 | Lab 07 Ex3 — software PWM on P2.0, 25/50/75 % | done, verified with s51 |
 
 ## Getting set up on a new machine
 
