@@ -53,26 +53,33 @@ walks it with `MOVC A,@A+DPTR` until it hits the 0.
 
 ## Q3
 
+Switch bits are read on P1.0–P1.3 (ON = 0, so `CPL A` first). SW1 is taken as
+the most-significant bit of N and SW4 as the least, so the nibble reads the
+same way the DIP block looks:
+
 ```
-MOV P1,#0FH      low nibble latches = 1 so SW1–SW4 can be read
 MOV A,P1
-CPL A            switches read 0 when ON (verified in Lab 07), invert so ON = 1
-ANL A,#0FH       keep the nibble
-MOV 60H,A        store
-MOV C,ACC.0      copy each switch bit to the LED at the other end
-MOV P1.7,C       SW1 -> LED4 ... SW4 -> LED1, so the LEDs mirror the DIP block
-MOV C,ACC.1
-MOV P1.6,C
-MOV C,ACC.2
-MOV P1.5,C
-MOV C,ACC.3
-MOV P1.4,C
-SJMP MAIN
+CPL A
+MOV B,A          raw bits in B
+MOV A,#00H
+MOV C,B.0        SW1 -> bit 3
+MOV ACC.3,C
+MOV C,B.1        SW2 -> bit 2
+MOV ACC.2,C
+MOV C,B.2        SW3 -> bit 1
+MOV ACC.1,C
+MOV C,B.3        SW4 -> bit 0
+MOV ACC.0,C
+MOV 60H,A        N stored
+SWAP A           N onto the LEDs, LED4 = MSB … LED1 = LSB
+ORL A,#0FH       keep the switch pins high
+MOV P1,A
 ```
 
-Bit moves leave P1.0–P1.3 untouched, so the switch pins stay readable.
-
-If the TA wants the raw pin reading (ON = 0) instead, delete `CPL A`.
+`q3_switch_nibble_lcd.asm` is the same loop plus the LCD: after the LEDs it
+positions the cursor at 80H and writes N as one hex digit (`ADD A,#07H` for
+A–F, then `ADD A,#30H`). The LCD only changes when something writes to it,
+which is why the plain Q3 left Q2's text on the screen.
 
 ## Verification (s51, breakpoints on LCDCMD/LCDDATA)
 
@@ -80,7 +87,7 @@ If the TA wants the raw pin reading (ON = 0) instead, delete `CPL A`.
 |---|---|
 | Q1 | cmd 38 0C 01 06 8F, data `S`, cmd C0, data `7` |
 | Q2 | cmd 38 0C 01 06 81, data `Shreyas & Yash`, cmd C2, data `08 OCT 2026` |
-| Q3 | switches 1010 ON → 60H = 0A, LEDs show the mirrored 0101 |
+| Q3 | SW1 only → 8, SW4 only → 1, SW2+SW4 → 5; 60H = N, LED4..LED1 = N |
 
 All three ran on the Pt-51 on 08 Oct 2026 (flashed over DFU from this Mac).
 
