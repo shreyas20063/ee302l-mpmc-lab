@@ -96,3 +96,24 @@ uses `<AT89C513xA.h>` — same `P0_0` pin names). Flash from this Mac with
 `tools/flash51.sh file.asm` or `file.c` after the boot sequence
 (DETACH → hold BOOT → tap RESET → release BOOT → ATTACH). If the LCD shows
 nothing, turn the blue contrast pot next to the switches.
+
+## Pin numbers on the Pt-51's AT89C5131A (VQFP64, "AT89C5131A-M")
+
+| Signal | Pin | | Signal | Pin |
+|---|---|---|---|---|
+| RS = P0.0 | 55 | | SW1 = P1.0 | 50 |
+| R/W = P0.1 | 46 | | SW2 = P1.1 | 51 |
+| E = P0.2 | 45 | | SW3 = P1.2 | 52 |
+| D0 = P2.0 | 56 | | SW4 = P1.3 | 53 |
+| D1 = P2.1 | 57 | | LED1 = P1.4 | 54 |
+| D2 = P2.2 | 58 | | LED2 = P1.5 | 59 |
+| D3 = P2.3 | 2 | | LED3 = P1.6 | 60 |
+| D4 = P2.4 | 3 | | LED4 = P1.7 | 61 |
+| D5 = P2.5 | 4 | | VDD / VSS | 9 / 42 |
+| D6 = P2.6 | 7 | | XTAL1 / XTAL2 | 6 / 5 |
+| D7 = P2.7 | 8 | | RST / EA | 44 / 24 |
+
+LCD pins 1–3 are VSS, VDD, VEE (contrast pot); 15–16 are the backlight.
+LEDs: port pin → series R → LED → GND (active high). Switches: pin → switch → GND
+against P1's internal pull-up (ON reads 0). P0 is open-drain, so RS/RW/E have
+board pull-ups. Source: Atmel doc 4338F, Figure 2.
