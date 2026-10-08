@@ -46,7 +46,10 @@ One folder per lab week, one sub-folder per experiment.
 | 8 | Lab 07 — LED blink on P1 (asm + C) | done, verified with s51 |
 | 8 | Lab 07 Ex1 — Timer 0 mode 1, 1 s LED pattern | done, verified on the Pt-51 board |
 | 8 | Lab 07 Ex2 — Timer 1 mode 1, switch-gated toggle | done, verified on the Pt-51 board |
-| 8 | Lab 07 Ex3 — software PWM on P2.0, 25/50/75 % | done, verified with s51 |
+| 8 | Lab 07 Ex3 — software PWM on P2.0, 25/50/75 % | done, verified on the Pt-51 (scope) |
+| 9 | Lab 08 Q1 — LCD: char right of line 1, integer left of line 2 (ASM + C) | written, verified with s51 |
+| 9 | Lab 08 Q2 — LCD: name and date centred (ASM + C) | written, verified with s51 |
+| 9 | Lab 08 Q3 — switch nibble → LEDs and 60H | written, verified with s51 |
 
 ## Getting set up on a new machine
 

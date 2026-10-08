@@ -6,19 +6,15 @@ SRC="$1"; [ -n "$SRC" ] || { echo "usage: $0 file.asm|file.hex"; exit 1; }
 B="${SRC%.*}"
 if [ "${SRC##*.}" = "asm" ]; then
   W=$(mktemp -d); N=$(basename "$B")
-  python3 - "$SRC" "$W/$N.s" <<'PY'
-import re, sys
-out = ["\t.module t", "\t.area HOME (CODE)", "\t.area XSEG (XDATA)", "\t.area PSEG (XDATA)", "\t.area CODE (ABS)"]
-for line in open(sys.argv[1]):
-    line = line.split(';')[0].rstrip()
-    if not line or line.strip().upper() == 'END': continue
-    line = re.sub(r'\b([0-9][0-9A-Fa-f]*)H\b', lambda m: '0x' + m.group(1), line)
-    if line.strip().upper().startswith('ORG'): line = '\t.org ' + line.split()[1]
-    out.append(line)
-open(sys.argv[2], 'w').write('\n'.join(out) + '\n')
-PY
+  python3 "$(dirname "$0")/asm2sdas.py" "$SRC" "$W/$N.s"
   (cd "$W" && sdas8051 -losgff "$N.s" && sdcc -mmcs51 "$N.rel" >/dev/null 2>&1 && packihx "$N.ihx" > "$N.hex")
   cp "$W/$N.hex" "$B.hex"; echo "built $B.hex ($(grep -c . "$B.hex") lines)"
+fi
+if [ "${SRC##*.}" = "c" ]; then
+  W=$(mktemp -d); N=$(basename "$B")
+  sed 's/#include <AT89C513xA.h>/#include <8051.h>/' "$SRC" > "$W/$N.c"
+  (cd "$W" && sdcc -mmcs51 "$N.c" >/dev/null && packihx "$N.ihx" > "$N.hex")
+  cp "$W/$N.hex" "$B.hex"; echo "built $B.hex from C"
 fi
 HEX="$B.hex"
 if ! dfu-programmer at89c5131 get bootloader-version >/dev/null 2>&1; then
