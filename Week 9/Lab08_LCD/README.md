@@ -45,7 +45,7 @@ A "set DDRAM address" command is `80H + position`:
 | Line 2 | C0H | | CFH |
 
 - Q1: `8FH` → right end of line 1, then `'S'`; `C0H` → left end of line 2, then `7 + 30H = '7'`.
-- Q2: `SHREYAS` is 7 chars → (16 − 7) / 2 = 4 → `84H`. `08 OCT 2026` is 11 → (16 − 11) / 2 = 2 → `C2H`.
+- Q2: `Shreyas & Yash` is 14 chars → (16 − 14) / 2 = 1 → `81H`. `08 OCT 2026` is 11 → (16 − 11) / 2 = 2 → `C2H`.
 
 Digits are sent as ASCII: add 30H to the number. Q1 does this explicitly
 (`ADD A,#30H`); Q2 stores the text as a `DB` string ending in 0 and `PRINT`
@@ -59,11 +59,18 @@ MOV A,P1
 CPL A            switches read 0 when ON (verified in Lab 07), invert so ON = 1
 ANL A,#0FH       keep the nibble
 MOV 60H,A        store
-SWAP A           move it to bits 7..4 (the LEDs)
-ORL A,#0FH       keep the switch pins high while writing
-MOV P1,A
+MOV C,ACC.0      copy each switch bit to the LED at the other end
+MOV P1.7,C       SW1 -> LED4 ... SW4 -> LED1, so the LEDs mirror the DIP block
+MOV C,ACC.1
+MOV P1.6,C
+MOV C,ACC.2
+MOV P1.5,C
+MOV C,ACC.3
+MOV P1.4,C
 SJMP MAIN
 ```
+
+Bit moves leave P1.0–P1.3 untouched, so the switch pins stay readable.
 
 If the TA wants the raw pin reading (ON = 0) instead, delete `CPL A`.
 
@@ -72,8 +79,10 @@ If the TA wants the raw pin reading (ON = 0) instead, delete `CPL A`.
 | Program | Bytes seen on P2 |
 |---|---|
 | Q1 | cmd 38 0C 01 06 8F, data `S`, cmd C0, data `7` |
-| Q2 | cmd 38 0C 01 06 84, data `SHREYAS`, cmd C2, data `08 OCT 2026` |
-| Q3 | P1 pins 0101 (switches 1010 ON) → 60H = 0A, P1 = AFH |
+| Q2 | cmd 38 0C 01 06 81, data `Shreyas & Yash`, cmd C2, data `08 OCT 2026` |
+| Q3 | switches 1010 ON → 60H = 0A, LEDs show the mirrored 0101 |
+
+All three ran on the Pt-51 on 08 Oct 2026 (flashed over DFU from this Mac).
 
 Both C files compile with SDCC (header swapped to `<8051.h>`; the lab IDE
 uses `<AT89C513xA.h>` — same `P0_0` pin names). Flash from this Mac with

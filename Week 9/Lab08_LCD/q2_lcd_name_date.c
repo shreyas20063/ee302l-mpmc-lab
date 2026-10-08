@@ -55,8 +55,8 @@ LCD_CmdWrite(0x06);
 void main(void)
 {
 LCD_Init();
-LCD_CmdWrite(0x84);
-LCD_Print("SHREYAS");
+LCD_CmdWrite(0x81);
+LCD_Print("Shreyas & Yash");
 LCD_CmdWrite(0xC2);
 LCD_Print("08 OCT 2026");
 while(1);
