@@ -12,7 +12,7 @@ if [ "${SRC##*.}" = "asm" ]; then
 fi
 if [ "${SRC##*.}" = "c" ]; then
   W=$(mktemp -d); N=$(basename "$B")
-  sed 's/#include <AT89C513xA.h>/#include <8051.h>/' "$SRC" > "$W/$N.c"
+  cp "$SRC" "$W/$N.c"
   (cd "$W" && sdcc -mmcs51 "$N.c" >/dev/null && packihx "$N.ihx" > "$N.hex")
   cp "$W/$N.hex" "$B.hex"; echo "built $B.hex from C"
 fi
