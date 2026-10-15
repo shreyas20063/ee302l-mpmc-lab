@@ -130,3 +130,13 @@ Resolution is 3.2 mV ≈ 0.3 °C. The reading updates every 0.5 s on LCD line 2,
 | ADC values 0, 77, 93, 124, 512, 1023 | all read back exactly |
 | Command bits | SGL = 1, channel 0 |
 | 77 counts (248 mV) | LCD shows ` 24.8°C` |
+
+## On the board (15 Oct 2026)
+
+Both ran on the Pt-51, flashed over DFU from this Mac (`tools/flash51.sh`).
+
+| Program | Result |
+|---|---|
+| Q1 | Board powered from another PC; USB-to-TTL converter (TXD→P3.0, RXD→P3.1, GND) on this Mac at `/dev/cu.usbserial-10`. Sending `1234` returned `****`, `Access Granted`, then a new prompt. Wrong attempts, the attempt counter and the lockout were then demonstrated by hand in `screen`. |
+| Q2 | MCP3008-I/P on a breadboard from the SPI header. The pot swept the display across the full range; the LM35DZ showed room temperature. |
+

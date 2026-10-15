@@ -50,8 +50,8 @@ One folder per lab week, one sub-folder per experiment.
 | 9 | Lab 08 Q1 — LCD: char right of line 1, integer left of line 2 (ASM + C) | done, verified on the Pt-51 board |
 | 9 | Lab 08 Q2 — LCD: name and date centred (ASM + C) | done, verified on the Pt-51 board |
 | 9 | Lab 08 Q3 — switch nibble → LEDs and 60H | done, verified on the Pt-51 board |
-| 10 | Lab 09 Q1 — UART password lock (C, LCD + LEDs) | written, verified in s51 over a simulated UART |
-| 10 | Lab 09 Q2 — LM35 via MCP3008 SPI ADC, temperature on LCD (C) | written, SPI checked against an MCP3008 model |
+| 10 | Lab 09 Q1 — UART password lock (C, LCD + LEDs) | done, verified on the Pt-51 board |
+| 10 | Lab 09 Q2 — LM35 via MCP3008 SPI ADC, temperature on LCD (C) | done, verified on the Pt-51 board |
 
 ## Getting set up on a new machine
 
