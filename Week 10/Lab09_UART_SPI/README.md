@@ -80,7 +80,7 @@ Leave with Ctrl-A then K.
 
 ## Q2 — SPI ADC
 
-**ADC assumed: MCP3008.** It is a 10-bit, 8-channel SPI ADC and the usual part for the Pt-51. Check the chip marking. An MCP3208 (12-bit) needs a different command byte and mask.
+**ADC: MCP3008-I/P** (10-bit, 8-channel, DIP-16), confirmed from the kit. Before the LM35, test the wiring with the pot: ends to 3.3 V and GND, wiper to CH0. The display should sweep 00.0 to 330.0 (the reading in mV / 10).
 
 **Wiring.** The SPI header pins are fixed by the board.
 
