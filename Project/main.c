@@ -3,9 +3,11 @@
 #define IR_IN P3_2
 #define IR_OUT P1_0
 #define LED_RX P1_7
-#define MAX_EDGES 400
+#define MAX_EDGES 360
 #define REPLAY_FIX 212
-#define MAX_HEARD 100
+#define MAX_HEARD 90
+#define SLOTS 8
+#define NAME_LEN 8
 #define MATCH_TICKS 400
 #define MARK_FIX 180
 #define SPACE_FIX 140
@@ -21,6 +23,12 @@ unsigned int last_t;
 unsigned char rx_level;
 unsigned char rx_started;
 unsigned char comp=0;
+unsigned char carrier_khz=38;
+__xdata unsigned char slot_used[SLOTS];
+__xdata unsigned char slot_a0[SLOTS];
+__xdata unsigned char slot_a1[SLOTS];
+__xdata unsigned char slot_cmd[SLOTS];
+__xdata char slot_name[SLOTS][NAME_LEN+1];
 
 void uart_init(void)
 {
@@ -36,6 +44,13 @@ void uart_tx(char c)
 SBUF=c;
 while(!TI);
 TI=0;
+}
+
+char uart_rx(void)
+{
+while(!RI);
+RI=0;
+return SBUF;
 }
 
 void uart_print(char *s)
@@ -63,6 +78,13 @@ while(i)
 i--;
 uart_tx(buf[i]);
 }
+}
+
+void uart_hex(unsigned char b)
+{
+char h[]="0123456789ABCDEF";
+uart_tx(h[b>>4]);
+uart_tx(h[b&0x0F]);
 }
 
 void carrier_set(unsigned int reload)
@@ -256,13 +278,14 @@ uart_num(n_edges);
 uart_print(" durations\r\n");
 }
 
-void nec_frame(unsigned char addr,unsigned char cmd)
+void nec_build(unsigned char a0,unsigned char a1,unsigned char cmd)
 {
 unsigned char b[4];
 unsigned char i;
 unsigned char j;
-b[0]=addr;
-b[1]=~addr;
+unsigned long total=0;
+b[0]=a0;
+b[1]=a1;
 b[2]=cmd;
 b[3]=~cmd;
 n_edges=0;
@@ -280,7 +303,218 @@ dur[n_edges++]=1120;
 }
 }
 dur[n_edges++]=1120;
-uart_print("\r\nloaded NEC test frame: address 04, command 08 (LG TV power)\r\n");
+for(i=0;i<n_edges;i++)
+total=total+dur[i];
+dur[n_edges++]=0x8000|((216000-total)>>6);
+dur[n_edges++]=18000;
+dur[n_edges++]=4500;
+dur[n_edges++]=1120;
+}
+
+unsigned char nec_decode(unsigned char *a0,unsigned char *a1,unsigned char *cmd)
+{
+unsigned char b[4];
+unsigned char i;
+unsigned char j;
+unsigned char k=3;
+if(n_edges<67)
+return 0;
+if(dur[0]<14000 || dur[0]>22000 || dur[1]<7000 || dur[1]>11000)
+return 0;
+for(i=0;i<4;i++)
+{
+b[i]=0;
+for(j=0;j<8;j++)
+{
+if(dur[k]&0x8000)
+return 0;
+if(dur[k]>2200)
+b[i]=b[i]|(1<<j);
+k=k+2;
+}
+}
+if((b[2]^b[3])!=0xFF)
+return 0;
+*a0=b[0];
+*a1=b[1];
+*cmd=b[2];
+return 1;
+}
+
+unsigned char ee_read(unsigned int a)
+{
+unsigned char v;
+EECON=0x02;
+AUXR=AUXR|0x20;
+v=*((__xdata unsigned char *)a);
+AUXR=AUXR&0xDF;
+EECON=0x00;
+return v;
+}
+
+void ee_latch(unsigned int a,unsigned char v)
+{
+EECON=0x02;
+*((__xdata unsigned char *)a)=v;
+EECON=0x00;
+}
+
+void ee_program(void)
+{
+EECON=0x52;
+EECON=0xA2;
+while(EECON&0x01);
+EECON=0x00;
+}
+
+void slots_save(void)
+{
+unsigned char i;
+unsigned char j;
+unsigned int a=0;
+for(i=0;i<SLOTS;i++)
+{
+ee_latch(a++,slot_used[i]);
+ee_latch(a++,slot_a0[i]);
+ee_latch(a++,slot_a1[i]);
+ee_latch(a++,slot_cmd[i]);
+for(j=0;j<=NAME_LEN;j++)
+ee_latch(a++,slot_name[i][j]);
+}
+ee_program();
+}
+
+void slots_load(void)
+{
+unsigned char i;
+unsigned char j;
+unsigned int a=0;
+for(i=0;i<SLOTS;i++)
+{
+slot_used[i]=ee_read(a++);
+slot_a0[i]=ee_read(a++);
+slot_a1[i]=ee_read(a++);
+slot_cmd[i]=ee_read(a++);
+for(j=0;j<=NAME_LEN;j++)
+slot_name[i][j]=ee_read(a++);
+if(slot_used[i]!=1)
+{
+slot_used[i]=0;
+slot_name[i][0]=0;
+}
+slot_name[i][NAME_LEN]=0;
+}
+}
+
+void slot_show(unsigned char i)
+{
+uart_tx('1'+i);
+uart_print("  ");
+if(slot_used[i])
+{
+uart_print(slot_name[i]);
+uart_print("  (");
+uart_hex(slot_a0[i]);
+uart_tx(' ');
+uart_hex(slot_a1[i]);
+uart_print(" cmd ");
+uart_hex(slot_cmd[i]);
+uart_print(")");
+}
+else
+uart_print("empty");
+uart_print("\r\n");
+}
+
+void slots_list(void)
+{
+unsigned char i;
+uart_print("\r\n");
+for(i=0;i<SLOTS;i++)
+slot_show(i);
+}
+
+void read_name(unsigned char s)
+{
+char c;
+unsigned char n=0;
+uart_print("name (Enter to finish): ");
+while(1)
+{
+c=uart_rx();
+if(c=='\r')
+break;
+if(c=='\n')
+continue;
+if((c==8 || c==127) && n>0)
+{
+n--;
+uart_print("\b \b");
+continue;
+}
+if(c>=32 && c<127 && n<NAME_LEN)
+{
+slot_name[s][n]=c;
+n++;
+uart_tx(c);
+}
+}
+slot_name[s][n]=0;
+uart_print("\r\n");
+}
+
+void slot_play(unsigned char i)
+{
+unsigned char old;
+if(!slot_used[i])
+{
+uart_print("slot empty\r\n");
+return;
+}
+nec_build(slot_a0[i],slot_a1[i],slot_cmd[i]);
+old=comp;
+comp=0;
+ir_replay();
+comp=old;
+uart_print("sent ");
+slot_show(i);
+}
+
+void offer_save(void)
+{
+unsigned char a0;
+unsigned char a1;
+unsigned char cmd;
+char c;
+if(!nec_decode(&a0,&a1,&cmd))
+{
+uart_print("not NEC: kept as raw capture only (p plays it)\r\n");
+return;
+}
+uart_print("NEC address ");
+uart_hex(a0);
+uart_tx(' ');
+uart_hex(a1);
+uart_print(" command ");
+uart_hex(cmd);
+uart_print("\r\nsave to slot 1-8 (any other key skips): ");
+c=uart_rx();
+if(c<'1' || c>'8')
+{
+uart_print("not saved\r\n");
+return;
+}
+uart_tx(c);
+uart_print("\r\n");
+c=c-'1';
+slot_a0[c]=a0;
+slot_a1[c]=a1;
+slot_cmd[c]=cmd;
+slot_used[c]=1;
+read_name(c);
+slots_save();
+uart_print("saved to EEPROM: ");
+slot_show(c);
 }
 
 unsigned int pca_now(void)
@@ -383,8 +617,10 @@ LED_RX=0;
 TMOD=0x21;
 uart_init();
 carrier_set(0xFF62);
+slots_load();
 uart_print("\r\nIR cloner dev build, 38 kHz\r\n");
-uart_print("r record  p play  o double press (6 s)  d dump  t load NEC test  l loopback  f measure carrier  k timing fix on/off  c/x carrier on/off  6/8/0 = 36/38/40 kHz\r\n");
+uart_print("r record+save  1-8 send slot  L list  e erase  p play last  o double press  d dump  t test frame  l loopback  f measure  k fix  q 36/38/40  c/x carrier\r\n");
+slots_list();
 while(1)
 {
 LED_RX=!IR_IN;
@@ -393,7 +629,49 @@ if(RI)
 c=SBUF;
 RI=0;
 if(c=='r')
+{
 ir_record();
+if(n_edges)
+offer_save();
+}
+else if(c>='1' && c<='8')
+slot_play(c-'1');
+else if(c=='L')
+slots_list();
+else if(c=='e')
+{
+uart_print("erase slot 1-8: ");
+c=uart_rx();
+if(c>='1' && c<='8')
+{
+slot_used[c-'1']=0;
+slot_name[c-'1'][0]=0;
+slots_save();
+uart_print("erased\r\n");
+}
+else
+uart_print("cancelled\r\n");
+}
+else if(c=='q')
+{
+if(carrier_khz==36)
+{
+carrier_set(0xFF62);
+carrier_khz=38;
+}
+else if(carrier_khz==38)
+{
+carrier_set(0xFF6A);
+carrier_khz=40;
+}
+else
+{
+carrier_set(0xFF59);
+carrier_khz=36;
+}
+uart_num(carrier_khz);
+uart_print(" kHz\r\n");
+}
 else if(c=='p')
 ir_replay();
 else if(c=='o')
@@ -406,7 +684,10 @@ ir_replay();
 else if(c=='d')
 ir_dump();
 else if(c=='t')
-nec_frame(0x04,0x08);
+{
+nec_build(0x04,0xFB,0x08);
+uart_print("\r\nloaded NEC test frame: address 04, command 08 (LG TV power)\r\n");
+}
 else if(c=='l')
 ir_loopback();
 else if(c=='c')
@@ -418,21 +699,6 @@ else if(c=='x')
 {
 carrier_off();
 uart_print("carrier off\r\n");
-}
-else if(c=='6')
-{
-carrier_set(0xFF59);
-uart_print("36 kHz\r\n");
-}
-else if(c=='8')
-{
-carrier_set(0xFF62);
-uart_print("38 kHz\r\n");
-}
-else if(c=='0')
-{
-carrier_set(0xFF6A);
-uart_print("40 kHz\r\n");
 }
 else if(c=='f')
 measure_carrier();

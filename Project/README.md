@@ -90,15 +90,33 @@ screen /dev/cu.usbserial-10 9600
 
 | Key | Action |
 |---|---|
-| `r` | wait for a remote, capture until 164 ms of silence (so NEC repeat pulses and multi-frame codes are kept), print every mark/space in µs |
-| `p` | replay the capture |
-| `o` | double press: replay, wait 6 s, replay (Epson power-off needs a confirming second press) |
-| `d` | print the capture again |
-| `t` | load a built-in NEC test frame (address 04, command 08 = LG TV power) as if it had been captured |
-| `l` | loopback: transmit the stored code and record our own receiver during the same pass, print sent vs heard, count matches within 200 µs |
-| `k` | timing correction on/off for replay (marks −90 µs, spaces +70 µs, from the loopback); off by default |
-| `c` / `x` | carrier on / off continuously (scope check) |
-| `6` `8` `0` | carrier 36 / 38 / 40 kHz |
+| `r` | record a button (capture ends after 164 ms of silence). If it decodes as NEC, it asks for a slot 1–8 and a name and saves it to EEPROM |
+| `1`–`8` | send that slot: rebuilt NEC frame + 40 ms gap + one repeat pulse (one 108 ms period, like a real short press) |
+| `L` | list slots (name, address, command) |
+| `e` + digit | erase a slot |
+| `p` / `o` | replay the last raw capture / the same twice, 6 s apart |
+| `d` | print the last capture in µs |
+| `t` / `l` | load the NEC test frame / loopback self-test |
+| `f` | measure the carrier (needs a jumper from P1.0 to P3.4) |
+| `k` | timing correction on/off for raw replay |
+| `q` | carrier 36 → 38 → 40 kHz |
+| `c` / `x` | carrier on / off continuously |
+
+### Slots and EEPROM
+
+NEC buttons are stored decoded: address (2 bytes) + command (the inverted check byte is
+recomputed), 4 + 9 bytes per slot with the name. 8 slots = 104 bytes in EEPROM page 0
+(the chip has 1 KB of data EEPROM in 128-byte pages). To write: set EEE in EECON, MOVX the
+bytes into the page latches, write 52H then A2H to EECON, and wait for EEBUSY to clear. To
+read: EEE plus AUXR.M0 (stretched MOVX). A blank EEPROM reads FFH, so the used flag must be
+exactly 01H. The slots are loaded at boot and survive resets, power-off and probably
+reflashing (DFU erase targets the flash).
+
+Replaying a rebuilt frame instead of the raw capture gives textbook NEC timing, free of the
+receiver's +90/−70 µs distortion, and the repeat pulse makes it a complete keypress. In s51
+the NEC test frame builds to 71 durations: frame, 40,000 µs gap, 9000/2250/560 repeat,
+frame + gap = 107.98 ms; it decodes back to 04 FB 08 F7. The EEPROM path cannot be
+simulated; checked on the board.
 
 The loopback uses the PCA counter (CMOD = 0, 0.5 µs ticks) as a second clock, because
 Timer 0 is busy timing the transmission. It needs no remote and no scope: the HS0038A2
