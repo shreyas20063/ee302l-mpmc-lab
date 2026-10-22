@@ -107,6 +107,13 @@ screen /dev/cu.usbserial-10 9600
 
 ### Standalone control
 
+**Verified on the board (22 Oct 2026):** both LCD lines, slots recorded with REC, and the
+projector responding to SEND **repeatedly**. One apparent failure was aim. The 5 mm IR LED's
+beam is narrow (about ±20°) and the projector's sensor is directional, so a few degrees off
+at 1 m loses it. The earlier "same code ignored within 3 s" result may partly have been aim
+as well; repeated SENDs of rebuilt frames (with the repeat pulse) work when aimed properly.
+More LED current (a second 100 Ω in parallel, about 72 mA) would widen the usable angle and range.
+
 The switches are read only when the button is pressed, so the number can be changed freely
 in between, and one press sends exactly once. The LCD shows the selection live
 (`SEL 3: ENTER` / `IR 38kHz  7/8 SAVED`). SW1 (P1.0) cannot take part: P1.0 is the only
