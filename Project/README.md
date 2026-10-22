@@ -95,6 +95,7 @@ screen /dev/cu.usbserial-10 9600
 | `d` | print the capture again |
 | `t` | load a built-in NEC test frame (address 04, command 08 = LG TV power) as if it had been captured |
 | `l` | loopback: transmit the stored code and record our own receiver during the same pass, print sent vs heard, count matches within 200 µs |
+| `k` | timing correction on/off for replay (marks −90 µs, spaces +70 µs, from the loopback); off by default |
 | `c` / `x` | carrier on / off continuously (scope check) |
 | `6` `8` `0` | carrier 36 / 38 / 40 kHz |
 
@@ -203,4 +204,23 @@ from marks and add about 70 µs to spaces before replay. The loopback gives the 
 Replay timing in s51 is within about 1 % of target (`REPLAY_FIX = 64` ticks).
 
 Done: roadmap steps 1 (receiver), 3 (carrier, measured on the board instead of a scope),
-and the core of 7 (loopback). Next: step 2 with a real remote (`r`), step 4 replay at a TV.
+and the core of 7 (loopback). 
+**First real clone (22 Oct 2026): Epson projector, POWER button.**
+
+| | |
+|---|---|
+| Capture | 67 durations, NEC: lead 9161/4360 µs, bursts 670–697 µs, gaps 400–427 / 1525–1561 µs |
+| Decoded | `83 55 90 6F`: extended NEC address 83 55 (Epson), command 90, check byte OK |
+| Replay | raw replay (no correction), IR LED aimed at the projector's IR window from under 1 m: **projector responded** |
+
+Lessons from the session:
+- A stray IR flash near the projector lamp started one capture (1 duration, 314 µs). The
+  recorder now ignores captures shorter than 8 durations and keeps waiting.
+- Captures live in XRAM and are lost when the board resets or loses power (roadmap step 9).
+- Epson asks for confirmation on power-off, so one POWER replay is a safe, visible test.
+
+Next build (`MIN_EDGES` filter, `k` correction, `REPLAY_FIX` re-measured at 118 ticks) is
+verified in s51 (correction on: 670/427/670 µs → 581/496/578; off: NEC frame within 7 µs),
+not yet flashed.
+
+Next: range test, the `k` comparison, then the UI (LCD and buttons) and memory slots.
