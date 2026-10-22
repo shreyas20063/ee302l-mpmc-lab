@@ -26,7 +26,8 @@ outputs the envelope: low during a mark, high during a space.
 | IR LED driver (transistor base) | P1.0 | Timer 2 clock-out pin; **keep onboard SW1 OFF**, or it shorts the carrier to GND |
 | Receiver activity | P1.7 (LED4) | lights while the receiver sees IR |
 | Slot select | P1.1–P1.3 (SW2–SW4) | 3-bit slot number, SW2 = MSB, ON = 1: 000 → slot 1 … 111 → slot 8 |
-| Send button | P3.5 | push button to GND (internal pull-up). Press = read SW2–SW4 and send that slot; hold > 1 s = send it again 6 s later |
+| SEND button | P3.5 | push button to GND (internal pull-up). Press = read SW2–SW4 and send that slot; hold > 1 s = send it again 6 s later |
+| REC button | P3.3 | press and release = record into the selected slot (press again to cancel); hold 3 s = erase it. A slot recorded this way is named by its code, e.g. `8355-90` |
 | Debug / control UART | P3.0 RxD, P3.1 TxD | USB-TTL converter to the Mac, 9600 8N1 (same as Lab 09) |
 | LCD (later) | P2 data, P0.0–P0.2 | same as Labs 08/09 |
 

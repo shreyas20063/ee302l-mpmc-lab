@@ -4,6 +4,7 @@
 #define IR_OUT P1_0
 #define LED_RX P1_7
 #define BTN P3_5
+#define REC P3_3
 #define LCD_data P2
 #define LCD_rs P0_0
 #define LCD_rw P0_1
@@ -293,9 +294,10 @@ uart_tx(' ');
 uart_print("\r\n");
 }
 
-void ir_record(void)
+void ir_record(unsigned char by_button)
 {
 unsigned char level;
+unsigned char rec_up=0;
 unsigned char ovf;
 unsigned long t;
 uart_print("\r\nwaiting for a remote (any key cancels)\r\n");
@@ -310,7 +312,21 @@ if(RI)
 {
 RI=0;
 uart_print("cancelled\r\n");
+n_edges=0;
 return;
+}
+if(by_button)
+{
+if(REC)
+rec_up=1;
+else if(rec_up)
+{
+uart_print("cancelled\r\n");
+n_edges=0;
+while(!REC);
+delay_ms(20);
+return;
+}
 }
 }
 TR0=0;
@@ -867,6 +883,85 @@ delay_ms(800);
 show_home();
 }
 
+void rec_button(void)
+{
+unsigned char sel;
+unsigned int held=0;
+unsigned char a0;
+unsigned char a1;
+unsigned char cmd;
+delay_ms(20);
+if(REC)
+return;
+sel=read_sel();
+lcd_at(0);
+lcd_str("REC SLOT ");
+lcd_ch('1'+sel);
+lcd_end();
+lcd_at(1);
+lcd_str("RELEASE=START");
+lcd_end();
+while(!REC && held<3000)
+{
+delay_ms(10);
+held=held+10;
+}
+if(held>=3000)
+{
+slot_used[sel]=0;
+slot_name[sel][0]=0;
+slots_save();
+uart_print("button: erased slot ");
+uart_tx('1'+sel);
+uart_print("\r\n");
+lcd_at(0);
+lcd_str("ERASED SLOT ");
+lcd_ch('1'+sel);
+lcd_end();
+lcd_at(1);
+lcd_end();
+while(!REC);
+delay_ms(1500);
+show_home();
+return;
+}
+delay_ms(20);
+lcd_at(1);
+lcd_str("PRESS REMOTE...");
+lcd_end();
+ir_record(1);
+if(n_edges==0)
+{
+lcd_two("RECORD","CANCELLED");
+}
+else if(nec_decode(&a0,&a1,&cmd))
+{
+slot_a0[sel]=a0;
+slot_a1[sel]=a1;
+slot_cmd[sel]=cmd;
+slot_used[sel]=1;
+slot_name[sel][0]=hexd[a0>>4];
+slot_name[sel][1]=hexd[a0&0x0F];
+slot_name[sel][2]=hexd[a1>>4];
+slot_name[sel][3]=hexd[a1&0x0F];
+slot_name[sel][4]='-';
+slot_name[sel][5]=hexd[cmd>>4];
+slot_name[sel][6]=hexd[cmd&0x0F];
+slot_name[sel][7]=0;
+slots_save();
+uart_print("button: saved to EEPROM: ");
+slot_show(sel);
+lcd_slot("SAVED SLOT ",sel);
+}
+else
+{
+uart_print("button: not NEC, not saved\r\n");
+lcd_two("NOT NEC","NOT SAVED");
+}
+delay_ms(1500);
+show_home();
+}
+
 void main(void)
 {
 char c;
@@ -886,6 +981,8 @@ while(1)
 LED_RX=!IR_IN;
 if(!BTN)
 button_send();
+if(!REC)
+rec_button();
 if(read_sel()!=sel_last)
 show_home();
 if(RI)
@@ -895,7 +992,7 @@ RI=0;
 if(c=='r')
 {
 lcd_two("RECORDING...","PRESS A BUTTON");
-ir_record();
+ir_record(0);
 if(n_edges)
 offer_save();
 else
