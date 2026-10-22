@@ -24,7 +24,9 @@ outputs the envelope: low during a mark, high during a space.
 |---|---|---|
 | TSOP1738 out | P3.2 | idles high, low during an IR mark |
 | IR LED driver (transistor base) | P1.0 | Timer 2 clock-out pin; **keep onboard SW1 OFF**, or it shorts the carrier to GND |
-| Receiver activity | P1.7 (LED4) | lights while the TSOP sees IR |
+| Receiver activity | P1.7 (LED4) | lights while the receiver sees IR |
+| Slot select | P1.1–P1.3 (SW2–SW4) | 3-bit slot number, SW2 = MSB, ON = 1: 000 → slot 1 … 111 → slot 8 |
+| Send button | P3.5 | push button to GND (internal pull-up). Press = read SW2–SW4 and send that slot; hold > 1 s = send it again 6 s later |
 | Debug / control UART | P3.0 RxD, P3.1 TxD | USB-TTL converter to the Mac, 9600 8N1 (same as Lab 09) |
 | LCD (later) | P2 data, P0.0–P0.2 | same as Labs 08/09 |
 
@@ -101,6 +103,13 @@ screen /dev/cu.usbserial-10 9600
 | `k` | timing correction on/off for raw replay |
 | `q` | carrier 36 → 38 → 40 kHz |
 | `c` / `x` | carrier on / off continuously |
+
+### Standalone control
+
+The switches are read only when the button is pressed, so the number can be changed freely
+in between, and one press sends exactly once. The LCD shows the selection live
+(`SEL 3: ENTER` / `IR 38kHz  7/8 SAVED`). SW1 (P1.0) cannot take part: P1.0 is the only
+Timer 2 clock-out pin, and SW1 ON grounds it.
 
 ### LCD
 

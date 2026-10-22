@@ -3,6 +3,7 @@
 #define IR_IN P3_2
 #define IR_OUT P1_0
 #define LED_RX P1_7
+#define BTN P3_5
 #define LCD_data P2
 #define LCD_rs P0_0
 #define LCD_rw P0_1
@@ -29,6 +30,7 @@ unsigned char rx_started;
 unsigned char comp=0;
 unsigned char carrier_khz=38;
 unsigned char lcd_col;
+unsigned char sel_last=0xFF;
 __code const char hexd[]="0123456789ABCDEF";
 __xdata unsigned char slot_used[SLOTS];
 __xdata unsigned char slot_a0[SLOTS];
@@ -548,21 +550,42 @@ uart_print("empty");
 uart_print("\r\n");
 }
 
+unsigned char read_sel(void)
+{
+unsigned char v=0;
+if(!P1_1)
+v=v|4;
+if(!P1_2)
+v=v|2;
+if(!P1_3)
+v=v|1;
+return v;
+}
+
 void show_home(void)
 {
 unsigned char i;
 unsigned char n=0;
+unsigned char sel;
 for(i=0;i<SLOTS;i++)
 n=n+slot_used[i];
+sel=read_sel();
+sel_last=sel;
 lcd_at(0);
-lcd_str("IR CLONER ");
-lcd_num(carrier_khz);
-lcd_str("kHz");
+lcd_str("SEL ");
+lcd_ch('1'+sel);
+lcd_str(": ");
+if(slot_used[sel])
+lcd_str(slot_name[sel]);
+else
+lcd_str("EMPTY");
 lcd_end();
 lcd_at(1);
-lcd_str("SLOTS ");
+lcd_str("IR ");
+lcd_num(carrier_khz);
+lcd_str("kHz  ");
 lcd_num(n);
-lcd_str("/8 USED");
+lcd_str("/8 SAVED");
 lcd_end();
 }
 
@@ -817,6 +840,33 @@ lcd_num(m);
 lcd_end();
 }
 
+void button_send(void)
+{
+unsigned char sel;
+unsigned int held=0;
+delay_ms(20);
+if(BTN)
+return;
+sel=read_sel();
+slot_play(sel);
+while(!BTN && held<1000)
+{
+delay_ms(10);
+held=held+10;
+}
+if(held>=1000 && slot_used[sel])
+{
+lcd_two("DOUBLE PRESS","WAIT 6 S...");
+uart_print("button held: second press in 6 s\r\n");
+wait_ticks(DOUBLE_GAP-2000UL*held);
+slot_play(sel);
+}
+while(!BTN);
+delay_ms(20);
+delay_ms(800);
+show_home();
+}
+
 void main(void)
 {
 char c;
@@ -834,6 +884,10 @@ slots_list();
 while(1)
 {
 LED_RX=!IR_IN;
+if(!BTN)
+button_send();
+if(read_sel()!=sel_last)
+show_home();
 if(RI)
 {
 c=SBUF;
