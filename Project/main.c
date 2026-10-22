@@ -41,9 +41,9 @@ s++;
 }
 }
 
-void uart_num(unsigned int n)
+void uart_num(unsigned long n)
 {
-char buf[5];
+char buf[10];
 unsigned char i=0;
 do
 {
@@ -80,6 +80,42 @@ void carrier_off(void)
 {
 IR_OUT=0;
 T2MOD=0x00;
+}
+
+void measure_carrier(void)
+{
+unsigned int count;
+unsigned char ovf=0;
+unsigned long hz;
+carrier_on();
+TR0=0;
+TMOD=0x25;
+TH0=0;
+TL0=0;
+TF0=0;
+CMOD=0x00;
+CL=0;
+CH=0;
+CF=0;
+CR=1;
+TR0=1;
+while(ovf<4)
+{
+if(CF)
+{
+CF=0;
+ovf++;
+}
+}
+TR0=0;
+CR=0;
+carrier_off();
+count=((unsigned int)TH0<<8)|TL0;
+TMOD=0x21;
+hz=(unsigned long)count*15625/2048;
+uart_print("carrier measured on P3.4: ");
+uart_num(hz);
+uart_print(" Hz (needs a jumper P1.0 -> P3.4)\r\n");
 }
 
 void ir_dump(void)
@@ -288,9 +324,9 @@ IR_OUT=0;
 LED_RX=0;
 TMOD=0x21;
 uart_init();
-carrier_set(0xFFB1);
+carrier_set(0xFF62);
 uart_print("\r\nIR cloner dev build, 38 kHz\r\n");
-uart_print("r record  p play  d dump  t load NEC test  l loopback test  c/x carrier on/off  6/8/0 = 36/38/40 kHz\r\n");
+uart_print("r record  p play  d dump  t load NEC test  l loopback  f measure carrier  c/x carrier on/off  6/8/0 = 36/38/40 kHz\r\n");
 while(1)
 {
 LED_RX=!IR_IN;
@@ -320,19 +356,21 @@ uart_print("carrier off\r\n");
 }
 else if(c=='6')
 {
-carrier_set(0xFFAD);
+carrier_set(0xFF59);
 uart_print("36 kHz\r\n");
 }
 else if(c=='8')
 {
-carrier_set(0xFFB1);
+carrier_set(0xFF62);
 uart_print("38 kHz\r\n");
 }
 else if(c=='0')
 {
-carrier_set(0xFFB5);
+carrier_set(0xFF6A);
 uart_print("40 kHz\r\n");
 }
+else if(c=='f')
+measure_carrier();
 }
 }
 }

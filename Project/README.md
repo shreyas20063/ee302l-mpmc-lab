@@ -30,26 +30,30 @@ outputs the envelope: low during a mark, high during a space.
 
 ## Carrier: Timer 2 clock-out, not the PCA
 
-The August plan used the PCA, but the datasheet rules it out. Its fastest PWM is
-12 MHz / 2 / 256 ≈ 23 kHz, and its toggle mode would need an interrupt every 13 µs.
-Timer 2 has a **clock-out mode**: a hardware 50 % square wave on P1.0.
+The August plan used the PCA, but its fastest PWM is about 23 kHz and its toggle mode
+would need an interrupt every 13 µs. Timer 2 has a **clock-out mode**: a hardware
+50 % square wave on P1.0.
 
 ```
-f = F_PER / (4 × (65536 − RCAP2))      F_PER = 24 MHz / 2 = 12 MHz in X1 mode
+f = 24 MHz / (4 × (65536 − RCAP2))
 ```
 
-| Carrier | 65536 − RCAP2 | RCAP2 | Actual |
-|---|---|---|---|
-| 36 kHz | 83 | FFADH | 36.14 kHz |
-| 38 kHz | 79 | FFB1H | 37.97 kHz |
-| 40 kHz | 75 | FFB5H | 40.00 kHz |
+The datasheet writes this with F_CLK_PERIPH, which suggests 12 MHz in X1 mode. **Measured
+on the board it is the full 24 MHz crystal.** RCAP2 = FFB1H gave 75,950 Hz, not 38 kHz.
+The `f` command measures the carrier on the board itself: a jumper from P1.0 to P3.4
+lets Timer 0 count carrier edges (counter mode) for 4 PCA overflows = 131.072 ms.
+
+| Carrier | 65536 − RCAP2 | RCAP2 | Expected | Measured |
+|---|---|---|---|---|
+| 36 kHz | 167 | FF59H | 35,928 Hz | |
+| 38 kHz | 158 | FF62H | 37,975 Hz | **37,971 Hz** |
+| 40 kHz | 150 | FF6AH | 40,000 Hz | |
 
 Timer 2 runs all the time. A mark sets T2OE (pin = clock-out) and a space clears it,
-with the P1.0 latch at 0 so the pin is driven low between marks. s51 does not model
-the clock-out pin, so the carrier is verified on the scope (`c` command, below).
+with the P1.0 latch at 0 so the pin is driven low between marks.
 
-Timers: T0 measures marks and spaces (0.5 µs ticks), T1 is the UART baud clock,
-T2 makes the carrier.
+Timers: T0 measures marks and spaces (0.5 µs ticks), T1 is the UART baud clock, T2
+makes the carrier, and the PCA counter is a second 0.5 µs clock for the loopback.
 
 ## IR LED driver
 
@@ -98,6 +102,10 @@ The loopback uses the PCA counter (CMOD = 0, 0.5 µs ticks) as a second clock, b
 Timer 0 is busy timing the transmission. It needs no remote and no scope: the HS0038A2
 only responds near 38 kHz, so a good match proves the carrier, the LED driver, the
 receiver and the capture timing in one go.
+
+**Aim matters.** The HS0038A2 sees about ±45° off its lens. With the IR LED shining at
+the receiver's side, the loopback flickered (43–75 edges heard for 67 sent). Aimed at the
+lens from 10–30 cm: 67/67.
 
 Printing captures in µs means the timing tables for the report come straight off the terminal.
 
@@ -180,21 +188,19 @@ Lab: open `main.c` in MCU 8051 IDE, compile, flash the hex with FLIP.
 
 ## Current state (22 Oct 2026)
 
-`main.c` is the dev build above: capture, replay, carrier control and dump over UART.
-Compiles to 1.4 KB code + 800 B XRAM.
+On the Pt-51 with HS0038A2, BC547B and the clear IR LED wired as above:
 
-Verified in s51 (24 MHz) with a planted NEC-style capture:
-
-| Planted | Replayed |
+| Test | Result |
 |---|---|
-| 9000 µs | 9007 µs |
-| 4500 | 4508 |
-| 560 | 566 |
-| 1690 | 1698 |
-| 560 | 563 |
+| Carrier, `f` with P1.0→P3.4 jumper | 37,971 Hz at RCAP2 = FF62H |
+| Loopback, `t` then `l` (NEC test frame, 67 durations) | 67 sent, 67 heard, **67 within 200 µs** |
+| Receiver distortion in that loopback | marks +90 µs average (+37..+136), spaces −70 µs (−114..−19) |
 
-`REPLAY_FIX = 64` removes the measured 32 µs per-segment loop overhead.
+The distortion is the receiver's own (within the HS0038A2 datasheet's pulse-width
+tolerance). A captured remote carries it, so a later step should subtract about 90 µs
+from marks and add about 70 µs to spaces before replay. The loopback gives the numbers.
 
-Next on hardware: roadmap step 1 (LED4 follows a remote), step 2 (`r` prints ~67
-durations for an NEC remote), step 3 (`c` shows 38 kHz on the scope), step 4 (`p`
-works a TV).
+Replay timing in s51 is within about 1 % of target (`REPLAY_FIX = 64` ticks).
+
+Done: roadmap steps 1 (receiver), 3 (carrier, measured on the board instead of a scope),
+and the core of 7 (loopback). Next: step 2 with a real remote (`r`), step 4 replay at a TV.
