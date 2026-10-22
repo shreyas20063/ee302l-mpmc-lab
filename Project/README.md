@@ -102,6 +102,16 @@ screen /dev/cu.usbserial-10 9600
 | `q` | carrier 36 → 38 → 40 kHz |
 | `c` / `x` | carrier on / off continuously |
 
+### LCD
+
+Same wiring and driver as Labs 08/09 (data P2, RS/RW/EN on P0.0–P0.2). `delay_ms` borrows
+Timer 0 (F830H = 1 ms), so the LCD only updates between captures and replays, never inside
+a timing loop. Every command shows its result: `IR CLONER 38kHz` / `SLOTS n/8 USED` when
+idle, `RECORDING...`, `NEC 8355 CMD 90` / `SAVE TO SLOT 1-8`, the name as it is typed,
+`SENT SLOT 2` / `SOURCE`, `MATCH 67 OF 67`, `37971 Hz`. Lines are padded to 16 characters
+instead of clearing the screen, so it doesn't flicker. In s51, startup writes 38 0C 01 06,
+then `IR CLONER 38kHz` and `SLOTS 0/8 USED`.
+
 ### Slots and EEPROM
 
 NEC buttons are stored decoded: address (2 bytes) + command (the inverted check byte is
