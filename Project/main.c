@@ -115,6 +115,7 @@ LCD_data=c;
 LCD_rs=0;
 LCD_rw=0;
 LCD_en=1;
+delay_ms(1);
 LCD_en=0;
 delay_ms(2);
 }
@@ -125,13 +126,15 @@ LCD_data=c;
 LCD_rs=1;
 LCD_rw=0;
 LCD_en=1;
+delay_ms(1);
 LCD_en=0;
 delay_ms(1);
 }
 
 void lcd_init(void)
 {
-delay_ms(20);
+delay_ms(50);
+lcd_cmd(0x38);
 lcd_cmd(0x38);
 lcd_cmd(0x0C);
 lcd_cmd(0x01);

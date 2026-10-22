@@ -119,7 +119,10 @@ Timer 0 (F830H = 1 ms), so the LCD only updates between captures and replays, ne
 a timing loop. Every command shows its result: `IR CLONER 38kHz` / `SLOTS n/8 USED` when
 idle, `RECORDING...`, `NEC 8355 CMD 90` / `SAVE TO SLOT 1-8`, the name as it is typed,
 `SENT SLOT 2` / `SOURCE`, `MATCH 67 OF 67`, `37971 Hz`. Lines are padded to 16 characters
-instead of clearing the screen, so it doesn't flicker. In s51, startup writes 38 0C 01 06,
+instead of clearing the screen, so it doesn't flicker. EN is held high for 1 ms (as in
+Lab 09): EN is on P0, which has only a slow external pull-up, and a 0.5 µs pulse made the LCD
+miss the first 38H, leaving it in 1-line mode (line 2 blank). 38H is now sent twice after a
+50 ms wait. In s51, startup writes 38 0C 01 06,
 then `IR CLONER 38kHz` and `SLOTS 0/8 USED`.
 
 ### Slots and EEPROM
