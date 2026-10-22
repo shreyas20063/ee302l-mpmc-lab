@@ -5,9 +5,16 @@
 #define LED_RX P1_7
 #define MAX_EDGES 400
 #define REPLAY_FIX 64
+#define MAX_HEARD 100
+#define MATCH_TICKS 400
 
 __xdata unsigned int dur[MAX_EDGES];
 unsigned int n_edges=0;
+__xdata unsigned int heard[MAX_HEARD];
+unsigned int n_heard;
+unsigned int last_t;
+unsigned char rx_level;
+unsigned char rx_started;
 
 void uart_init(void)
 {
@@ -155,6 +162,125 @@ uart_num(n_edges);
 uart_print(" durations\r\n");
 }
 
+void nec_frame(unsigned char addr,unsigned char cmd)
+{
+unsigned char b[4];
+unsigned char i;
+unsigned char j;
+b[0]=addr;
+b[1]=~addr;
+b[2]=cmd;
+b[3]=~cmd;
+n_edges=0;
+dur[n_edges++]=18000;
+dur[n_edges++]=9000;
+for(i=0;i<4;i++)
+{
+for(j=0;j<8;j++)
+{
+dur[n_edges++]=1120;
+if(b[i]&(1<<j))
+dur[n_edges++]=3380;
+else
+dur[n_edges++]=1120;
+}
+}
+dur[n_edges++]=1120;
+uart_print("\r\nloaded NEC test frame: address 04, command 08 (LG TV power)\r\n");
+}
+
+unsigned int pca_now(void)
+{
+unsigned char h;
+unsigned char l;
+do
+{
+h=CH;
+l=CL;
+}
+while(h!=CH);
+return ((unsigned int)h<<8)|l;
+}
+
+void listen_until_tf0(void)
+{
+unsigned int t;
+while(!TF0)
+{
+if(IR_IN!=rx_level)
+{
+t=pca_now();
+if(rx_started && n_heard<MAX_HEARD)
+{
+heard[n_heard]=t-last_t;
+n_heard++;
+}
+rx_started=1;
+last_t=t;
+rx_level=!rx_level;
+}
+}
+}
+
+void ir_loopback(void)
+{
+unsigned int i;
+unsigned int d;
+unsigned int ok=0;
+n_heard=0;
+rx_level=1;
+rx_started=0;
+CMOD=0x00;
+CL=0;
+CH=0;
+CR=1;
+for(i=0;i<n_edges;i++)
+{
+if(i&1)
+carrier_off();
+else
+carrier_on();
+d=dur[i];
+if(d>REPLAY_FIX)
+d=d-REPLAY_FIX;
+d=0-d;
+TR0=0;
+TH0=d>>8;
+TL0=d&0xFF;
+TF0=0;
+TR0=1;
+listen_until_tf0();
+}
+carrier_off();
+TR0=0;
+TH0=0xB1;
+TL0=0xE0;
+TF0=0;
+TR0=1;
+listen_until_tf0();
+TR0=0;
+CR=0;
+uart_print("\r\nsent  heard (us)\r\n");
+for(i=0;i<n_edges && i<n_heard;i++)
+{
+uart_num(dur[i]/2);
+uart_print("  ");
+uart_num(heard[i]/2);
+if(heard[i]+MATCH_TICKS>=dur[i] && heard[i]<=dur[i]+MATCH_TICKS)
+ok++;
+else
+uart_print("  <- off");
+uart_print("\r\n");
+}
+uart_print("sent ");
+uart_num(n_edges);
+uart_print(", heard ");
+uart_num(n_heard);
+uart_print(", within 200 us: ");
+uart_num(ok);
+uart_print("\r\n");
+}
+
 void main(void)
 {
 char c;
@@ -164,7 +290,7 @@ TMOD=0x21;
 uart_init();
 carrier_set(0xFFB1);
 uart_print("\r\nIR cloner dev build, 38 kHz\r\n");
-uart_print("r record  p play  d dump  c carrier on  x carrier off  6/8/0 = 36/38/40 kHz\r\n");
+uart_print("r record  p play  d dump  t load NEC test  l loopback test  c/x carrier on/off  6/8/0 = 36/38/40 kHz\r\n");
 while(1)
 {
 LED_RX=!IR_IN;
@@ -178,6 +304,10 @@ else if(c=='p')
 ir_replay();
 else if(c=='d')
 ir_dump();
+else if(c=='t')
+nec_frame(0x04,0x08);
+else if(c=='l')
+ir_loopback();
 else if(c=='c')
 {
 carrier_on();

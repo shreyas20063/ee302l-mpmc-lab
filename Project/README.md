@@ -54,24 +54,26 @@ T2 makes the carrier.
 ## IR LED driver
 
 ```
- 5V ──47Ω──►|── IR LED ── C
+ 5V ──100Ω──►|── IR LED ── C
                           CL100S (NPN)    E ── GND
- P1.0 ──┬──470Ω──────── B
+ P1.0 ──┬──1k───────── B
         └──2.2k── 5V
 ```
 
 Port 1 drives a `1` only through a weak internal pull-up (tens of µA), which can't
 switch a transistor hard enough on its own. The 2.2k pull-up supplies about 1.6 mA of
 base current; when P1.0 is low the pin sinks it and the transistor turns off.
-LED current is about (5 − 1.3 − 0.2) / 47 ≈ 75 mA peak, ~37 mA average at 50 % duty.
-The kit's CL100S replaces the BC547 from the sheet. Check its pin order
-(E/B/C) on its datasheet before wiring.
+LED current is about (5 − 1.3 − 0.1) / 100 ≈ 36 mA. 100 Ω, not 47 Ω: every port pin is high
+during reset and boot mode, so the LED is fully on until main() turns it off, and 47 Ω
+would put 0.26 W into a ¼ W resistor during a flash.
+Transistor: BC547B, flat face toward you, legs C B E. Base resistor 1k (sheet) works with
+the 2.2k pull-up: about 1.3 mA of base current.
 
-## TSOP1738 receiver
+## Receiver: HS0038A2 (kit part, replaces the TSOP1738)
 
-VS through 100Ω, with 4.7 µF from VS to GND (supply filter from the datasheet).
-OUT to P3.2, optional 10k pull-up to 5V. Vishay TSOP17xx pin order is 1 GND,
-2 VS, 3 OUT with the lens facing you; clones differ, so confirm on your part.
+Vishay HS0038A2, 38 kHz, active low, 4.5–5.5 V. With the lens facing you: 1 GND,
+2 VS, 3 OUT (from its datasheet). The newer HS0038**B** uses OUT/GND/VS, so check the
+letter. VS through 100 Ω with 4.7 µF to GND; OUT to P3.2 (30k pull-up built in).
 
 ## Dev workflow (UART)
 
@@ -87,8 +89,15 @@ screen /dev/cu.usbserial-10 9600
 | `r` | wait for a remote, capture until 32 ms of silence, print every mark/space in µs |
 | `p` | replay the capture |
 | `d` | print the capture again |
+| `t` | load a built-in NEC test frame (address 04, command 08 = LG TV power) as if it had been captured |
+| `l` | loopback: transmit the stored code and record our own receiver during the same pass, print sent vs heard, count matches within 200 µs |
 | `c` / `x` | carrier on / off continuously (scope check) |
 | `6` `8` `0` | carrier 36 / 38 / 40 kHz |
+
+The loopback uses the PCA counter (CMOD = 0, 0.5 µs ticks) as a second clock, because
+Timer 0 is busy timing the transmission. It needs no remote and no scope: the HS0038A2
+only responds near 38 kHz, so a good match proves the carrier, the LED driver, the
+receiver and the capture timing in one go.
 
 Printing captures in µs means the timing tables for the report come straight off the terminal.
 
