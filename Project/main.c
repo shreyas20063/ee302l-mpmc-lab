@@ -4,12 +4,14 @@
 #define IR_OUT P1_0
 #define LED_RX P1_7
 #define MAX_EDGES 400
-#define REPLAY_FIX 118
+#define REPLAY_FIX 212
 #define MAX_HEARD 100
 #define MATCH_TICKS 400
 #define MARK_FIX 180
 #define SPACE_FIX 140
 #define MIN_EDGES 8
+#define END_OVF 5
+#define DOUBLE_GAP 12000000
 
 __xdata unsigned int dur[MAX_EDGES];
 unsigned int n_edges=0;
@@ -122,6 +124,13 @@ uart_num(hz);
 uart_print(" Hz (needs a jumper P1.0 -> P3.4)\r\n");
 }
 
+unsigned long dur_ticks(unsigned int i)
+{
+if(dur[i]&0x8000)
+return (unsigned long)(dur[i]&0x7FFF)<<6;
+return dur[i];
+}
+
 void ir_dump(void)
 {
 unsigned int i;
@@ -129,7 +138,7 @@ uart_num(n_edges);
 uart_print(" durations, microseconds (mark space mark ...):\r\n");
 for(i=0;i<n_edges;i++)
 {
-uart_num(dur[i]/2);
+uart_num(dur_ticks(i)/2);
 if(i%10==9)
 uart_print("\r\n");
 else
@@ -141,11 +150,14 @@ uart_print("\r\n");
 void ir_record(void)
 {
 unsigned char level;
+unsigned char ovf;
+unsigned long t;
 uart_print("\r\nwaiting for a remote (any key cancels)\r\n");
 do
 {
 n_edges=0;
 level=0;
+ovf=0;
 while(IR_IN)
 {
 if(RI)
@@ -160,15 +172,26 @@ TH0=0;
 TL0=0;
 TF0=0;
 TR0=1;
-while(n_edges<MAX_EDGES && !TF0)
+while(n_edges<MAX_EDGES && ovf<END_OVF)
 {
+if(TF0)
+{
+TF0=0;
+ovf++;
+}
 if(IR_IN!=level)
 {
 TR0=0;
-dur[n_edges]=((unsigned int)TH0<<8)|TL0;
+t=((unsigned long)ovf<<16)|((unsigned int)TH0<<8)|TL0;
+if(t<0x8000)
+dur[n_edges]=t;
+else
+dur[n_edges]=0x8000|(t>>6);
 n_edges++;
 TH0=0;
 TL0=0;
+TF0=0;
+ovf=0;
 TR0=1;
 level=!level;
 }
@@ -179,10 +202,31 @@ while(n_edges<MIN_EDGES);
 ir_dump();
 }
 
-unsigned int replay_ticks(unsigned int i)
+void wait_ticks(unsigned long t)
 {
 unsigned int d;
-d=dur[i];
+while(t)
+{
+if(t>60000)
+d=60000;
+else
+d=t;
+t=t-d;
+d=0-d;
+TR0=0;
+TH0=d>>8;
+TL0=d&0xFF;
+TF0=0;
+TR0=1;
+while(!TF0);
+}
+TR0=0;
+}
+
+unsigned long replay_ticks(unsigned int i)
+{
+unsigned long d;
+d=dur_ticks(i);
 if(comp)
 {
 if(i&1)
@@ -192,29 +236,21 @@ d=d-MARK_FIX;
 }
 if(d>REPLAY_FIX)
 d=d-REPLAY_FIX;
-return 0-d;
+return d;
 }
 
 void ir_replay(void)
 {
 unsigned int i;
-unsigned int d;
 for(i=0;i<n_edges;i++)
 {
 if(i&1)
 carrier_off();
 else
 carrier_on();
-d=replay_ticks(i);
-TR0=0;
-TH0=d>>8;
-TL0=d&0xFF;
-TF0=0;
-TR0=1;
-while(!TF0);
+wait_ticks(replay_ticks(i));
 }
 carrier_off();
-TR0=0;
 uart_print("\r\nplayed ");
 uart_num(n_edges);
 uart_print(" durations\r\n");
@@ -292,7 +328,7 @@ CMOD=0x00;
 CL=0;
 CH=0;
 CR=1;
-for(i=0;i<n_edges;i++)
+for(i=0;i<n_edges && !(dur[i]&0x8000);i++)
 {
 if(i&1)
 carrier_off();
@@ -348,7 +384,7 @@ TMOD=0x21;
 uart_init();
 carrier_set(0xFF62);
 uart_print("\r\nIR cloner dev build, 38 kHz\r\n");
-uart_print("r record  p play  d dump  t load NEC test  l loopback  f measure carrier  k timing fix on/off  c/x carrier on/off  6/8/0 = 36/38/40 kHz\r\n");
+uart_print("r record  p play  o double press (6 s)  d dump  t load NEC test  l loopback  f measure carrier  k timing fix on/off  c/x carrier on/off  6/8/0 = 36/38/40 kHz\r\n");
 while(1)
 {
 LED_RX=!IR_IN;
@@ -360,6 +396,13 @@ if(c=='r')
 ir_record();
 else if(c=='p')
 ir_replay();
+else if(c=='o')
+{
+ir_replay();
+uart_print("waiting 6 s\r\n");
+wait_ticks(DOUBLE_GAP);
+ir_replay();
+}
 else if(c=='d')
 ir_dump();
 else if(c=='t')

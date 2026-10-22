@@ -90,8 +90,9 @@ screen /dev/cu.usbserial-10 9600
 
 | Key | Action |
 |---|---|
-| `r` | wait for a remote, capture until 32 ms of silence, print every mark/space in µs |
+| `r` | wait for a remote, capture until 164 ms of silence (so NEC repeat pulses and multi-frame codes are kept), print every mark/space in µs |
 | `p` | replay the capture |
+| `o` | double press: replay, wait 6 s, replay (Epson power-off needs a confirming second press) |
 | `d` | print the capture again |
 | `t` | load a built-in NEC test frame (address 04, command 08 = LG TV power) as if it had been captured |
 | `l` | loopback: transmit the stored code and record our own receiver during the same pass, print sent vs heard, count matches within 200 µs |
@@ -219,8 +220,30 @@ Lessons from the session:
 - Captures live in XRAM and are lost when the board resets or loses power (roadmap step 9).
 - Epson asks for confirmation on power-off, so one POWER replay is a safe, visible test.
 
-Next build (`MIN_EDGES` filter, `k` correction, `REPLAY_FIX` re-measured at 118 ticks) is
-verified in s51 (correction on: 670/427/670 µs → 581/496/578; off: NEC frame within 7 µs),
-not yet flashed.
+**Off and on, same session.** Epson asks "Power off?" on the first POWER press and needs a
+second press to confirm. Two replays 1 s or 3 s apart only showed the dialog; **6 s apart
+turned it off**. The projector ignores the same code again within a few seconds (a
+lock-out against reflections and double triggers); a person's double press is naturally
+slower. After the cool-down, one replay turned it back on. The `o` key does the 6 s
+double press.
 
-Next: range test, the `k` comparison, then the UI (LCD and buttons) and memory slots.
+Problems hit and fixed during the session:
+- Garbled UART (`1MM&�679…`) after re-plugging the converter: its GND wire must go
+  straight to a Pt-51 GND pin. The board is powered from another PC, so that wire is the
+  only shared reference.
+- Each replay showed the dialog but never confirmed; first suspected the missing NEC repeat
+  pulses, then found the lock-out above.
+
+### Capture format (current `main.c`)
+
+Durations under 16.4 ms are stored in 0.5 µs ticks. Longer gaps (between frames, before
+repeat pulses) are stored as `8000H | ticks/64` (32 µs steps, up to 1 s). Capture ends after
+5 Timer 0 overflows (164 ms) of silence. Replay waits in 30 ms chunks for long gaps.
+`REPLAY_FIX` re-measured at 212 ticks for the 32-bit wait routine. In s51, a planted
+9000/4500/560/40000/560 µs code replays as 8999/4500/559/40050/556 µs. The loopback
+compares the first frame only.
+
+This build (164 ms capture, `o`, `REPLAY_FIX` 212) is verified in s51, not yet flashed.
+The board still runs the build that did the off/on above.
+
+Next: flash this build, range test, then the UI (LCD and buttons) and memory slots.
