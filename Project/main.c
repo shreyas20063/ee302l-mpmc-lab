@@ -1,106 +1,208 @@
-/* IR remote cloner - Pt-51 (AT89C5131A), 24 MHz
- * receive: TSOP1738 out -> P3.2 (idles high, goes low during an IR mark)
- * send:    IR LED driver -> P1.4 (needs 38 kHz carrier, see carrier_on)
- * SW1 (P1.0) = record, SW2 (P1.1) = replay, LED4 (P1.7) = busy light
- */
-#include <8051.h>
+#include <AT89C513xA.h>
 
-#define IR_IN	P3_2
-#define SW1	P1_0
-#define SW2	P1_1
-#define LED	P1_7
+#define IR_IN P3_2
+#define IR_OUT P1_0
+#define LED_RX P1_7
+#define MAX_EDGES 400
+#define REPLAY_FIX 64
 
-#define MAX_EDGES 400			/* AC remotes send 300+ edges */
-__xdata unsigned int dur[MAX_EDGES];	/* mark/space lengths in timer ticks */
-unsigned int n_edges = 0;
+__xdata unsigned int dur[MAX_EDGES];
+unsigned int n_edges=0;
 
-/* timer 0, mode 1: one tick = one machine cycle = 0.5 us at 24 MHz */
-static void t0_init(void)
+void uart_init(void)
 {
-	TMOD = (TMOD & 0xF0) | 0x01;
+SCON=0x50;
+PCON=PCON|0x80;
+TH1=0xF3;
+TL1=0xF3;
+TR1=1;
 }
 
-static void t0_restart(void)
+void uart_tx(char c)
 {
-	TR0 = 0;
-	TH0 = 0;
-	TL0 = 0;
-	TF0 = 0;
-	TR0 = 1;
+SBUF=c;
+while(!TI);
+TI=0;
 }
 
-static unsigned int t0_read(void)
+void uart_print(char *s)
 {
-	return ((unsigned int)TH0 << 8) | TL0;
+while(*s)
+{
+uart_tx(*s);
+s++;
+}
 }
 
-/* wait for the first falling edge, then time every level change into dur[].
- * capture ends when the line sits idle long enough to overflow the timer
- * (~32 ms), which no remote protocol comes close to. */
-static void ir_capture(void)
+void uart_num(unsigned int n)
 {
-	unsigned char level;
-
-	n_edges = 0;
-	while (IR_IN)			/* wait for burst to start */
-		;
-	level = 0;
-	t0_restart();
-	while (n_edges < MAX_EDGES) {
-		while (IR_IN == level) {
-			if (TF0)	/* line stuck -> burst over */
-				return;
-		}
-		dur[n_edges++] = t0_read();
-		t0_restart();
-		level = !level;
-	}
+char buf[5];
+unsigned char i=0;
+do
+{
+buf[i]='0'+n%10;
+n=n/10;
+i++;
+}
+while(n);
+while(i)
+{
+i--;
+uart_tx(buf[i]);
+}
 }
 
-/* 38 kHz on P1.4. Plan: PCA high-speed output on CEX1 so the hardware
- * makes the carrier and the CPU only gates it. PCA registers are not in
- * <8051.h> - add them from the AT89C5131A datasheet when wiring this up. */
-static void carrier_on(void)
+void carrier_set(unsigned int reload)
 {
-	P1_4 = 1;	/* placeholder: constant on, no carrier yet */
+TR2=0;
+T2CON=0x00;
+RCAP2H=reload>>8;
+RCAP2L=reload&0xFF;
+TH2=RCAP2H;
+TL2=RCAP2L;
+TR2=1;
 }
 
-static void carrier_off(void)
+void carrier_on(void)
 {
-	P1_4 = 0;
+T2MOD=0x02;
+IR_OUT=1;
 }
 
-/* play the burst back: marks = carrier on, spaces = carrier off */
-static void ir_replay(void)
+void carrier_off(void)
 {
-	unsigned int i;
+IR_OUT=0;
+T2MOD=0x00;
+}
 
-	for (i = 0; i < n_edges; i++) {
-		if ((i & 1) == 0)
-			carrier_on();
-		else
-			carrier_off();
-		t0_restart();
-		while (t0_read() < dur[i])
-			;
-	}
-	carrier_off();
+void ir_dump(void)
+{
+unsigned int i;
+uart_num(n_edges);
+uart_print(" durations, microseconds (mark space mark ...):\r\n");
+for(i=0;i<n_edges;i++)
+{
+uart_num(dur[i]/2);
+if(i%10==9)
+uart_print("\r\n");
+else
+uart_tx(' ');
+}
+uart_print("\r\n");
+}
+
+void ir_record(void)
+{
+unsigned char level=0;
+n_edges=0;
+uart_print("\r\nwaiting for a remote (any key cancels)\r\n");
+while(IR_IN)
+{
+if(RI)
+{
+RI=0;
+uart_print("cancelled\r\n");
+return;
+}
+}
+TR0=0;
+TH0=0;
+TL0=0;
+TF0=0;
+TR0=1;
+while(n_edges<MAX_EDGES && !TF0)
+{
+if(IR_IN!=level)
+{
+TR0=0;
+dur[n_edges]=((unsigned int)TH0<<8)|TL0;
+n_edges++;
+TH0=0;
+TL0=0;
+TR0=1;
+level=!level;
+}
+}
+TR0=0;
+ir_dump();
+}
+
+void ir_replay(void)
+{
+unsigned int i;
+unsigned int d;
+for(i=0;i<n_edges;i++)
+{
+if(i&1)
+carrier_off();
+else
+carrier_on();
+d=dur[i];
+if(d>REPLAY_FIX)
+d=d-REPLAY_FIX;
+d=0-d;
+TR0=0;
+TH0=d>>8;
+TL0=d&0xFF;
+TF0=0;
+TR0=1;
+while(!TF0);
+}
+carrier_off();
+TR0=0;
+uart_print("\r\nplayed ");
+uart_num(n_edges);
+uart_print(" durations\r\n");
 }
 
 void main(void)
 {
-	t0_init();
-	LED = 0;
-	while (1) {
-		if (!SW1) {
-			LED = 1;
-			ir_capture();
-			LED = 0;
-		}
-		if (!SW2) {
-			LED = 1;
-			ir_replay();
-			LED = 0;
-		}
-	}
+char c;
+IR_OUT=0;
+LED_RX=0;
+TMOD=0x21;
+uart_init();
+carrier_set(0xFFB1);
+uart_print("\r\nIR cloner dev build, 38 kHz\r\n");
+uart_print("r record  p play  d dump  c carrier on  x carrier off  6/8/0 = 36/38/40 kHz\r\n");
+while(1)
+{
+LED_RX=!IR_IN;
+if(RI)
+{
+c=SBUF;
+RI=0;
+if(c=='r')
+ir_record();
+else if(c=='p')
+ir_replay();
+else if(c=='d')
+ir_dump();
+else if(c=='c')
+{
+carrier_on();
+uart_print("carrier ON at P1.0\r\n");
+}
+else if(c=='x')
+{
+carrier_off();
+uart_print("carrier off\r\n");
+}
+else if(c=='6')
+{
+carrier_set(0xFFAD);
+uart_print("36 kHz\r\n");
+}
+else if(c=='8')
+{
+carrier_set(0xFFB1);
+uart_print("38 kHz\r\n");
+}
+else if(c=='0')
+{
+carrier_set(0xFFB5);
+uart_print("40 kHz\r\n");
+}
+}
+}
 }

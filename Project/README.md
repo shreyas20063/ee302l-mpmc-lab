@@ -22,15 +22,75 @@ outputs the envelope: low during a mark, high during a space.
 
 | Signal | Pin | Note |
 |---|---|---|
-| TSOP1738 out | P3.2 | idles high, active low |
-| IR LED (via transistor) | P1.4 | shared with onboard LED1 — it doubles as a transmit indicator |
-| Record button | P1.0 | onboard SW1 |
-| Replay button | P1.1 | onboard SW2 |
-| Busy light | P1.7 | onboard LED4 |
+| TSOP1738 out | P3.2 | idles high, low during an IR mark |
+| IR LED driver (transistor base) | P1.0 | Timer 2 clock-out pin; **keep onboard SW1 OFF**, or it shorts the carrier to GND |
+| Receiver activity | P1.7 (LED4) | lights while the TSOP sees IR |
+| Debug / control UART | P3.0 RxD, P3.1 TxD | USB-TTL converter to the Mac, 9600 8N1 (same as Lab 09) |
+| LCD (later) | P2 data, P0.0–P0.2 | same as Labs 08/09 |
 
-38 kHz carrier plan: PCA high-speed output on CEX1 (= P1.4), so the
-hardware generates the carrier and the CPU only gates it on/off. PCA
-registers come from the AT89C5131A datasheet (not in sdcc's 8051.h).
+## Carrier: Timer 2 clock-out, not the PCA
+
+The August plan used the PCA, but the datasheet rules it out. Its fastest PWM is
+12 MHz / 2 / 256 ≈ 23 kHz, and its toggle mode would need an interrupt every 13 µs.
+Timer 2 has a **clock-out mode**: a hardware 50 % square wave on P1.0.
+
+```
+f = F_PER / (4 × (65536 − RCAP2))      F_PER = 24 MHz / 2 = 12 MHz in X1 mode
+```
+
+| Carrier | 65536 − RCAP2 | RCAP2 | Actual |
+|---|---|---|---|
+| 36 kHz | 83 | FFADH | 36.14 kHz |
+| 38 kHz | 79 | FFB1H | 37.97 kHz |
+| 40 kHz | 75 | FFB5H | 40.00 kHz |
+
+Timer 2 runs all the time. A mark sets T2OE (pin = clock-out) and a space clears it,
+with the P1.0 latch at 0 so the pin is driven low between marks. s51 does not model
+the clock-out pin, so the carrier is verified on the scope (`c` command, below).
+
+Timers: T0 measures marks and spaces (0.5 µs ticks), T1 is the UART baud clock,
+T2 makes the carrier.
+
+## IR LED driver
+
+```
+ 5V ──47Ω──►|── IR LED ── C
+                          CL100S (NPN)    E ── GND
+ P1.0 ──┬──470Ω──────── B
+        └──2.2k── 5V
+```
+
+Port 1 drives a `1` only through a weak internal pull-up (tens of µA), which can't
+switch a transistor hard enough on its own. The 2.2k pull-up supplies about 1.6 mA of
+base current; when P1.0 is low the pin sinks it and the transistor turns off.
+LED current is about (5 − 1.3 − 0.2) / 47 ≈ 75 mA peak, ~37 mA average at 50 % duty.
+The kit's CL100S replaces the BC547 from the sheet. Check its pin order
+(E/B/C) on its datasheet before wiring.
+
+## TSOP1738 receiver
+
+VS through 100Ω, with 4.7 µF from VS to GND (supply filter from the datasheet).
+OUT to P3.2, optional 10k pull-up to 5V. Vishay TSOP17xx pin order is 1 GND,
+2 VS, 3 OUT with the lens facing you; clones differ, so confirm on your part.
+
+## Dev workflow (UART)
+
+Until the LCD/button UI exists, the board is driven from the Mac:
+
+```bash
+cd Project && make flash        # after the BOOT sequence
+screen /dev/cu.usbserial-10 9600
+```
+
+| Key | Action |
+|---|---|
+| `r` | wait for a remote, capture until 32 ms of silence, print every mark/space in µs |
+| `p` | replay the capture |
+| `d` | print the capture again |
+| `c` / `x` | carrier on / off continuously (scope check) |
+| `6` `8` `0` | carrier 36 / 38 / 40 kHz |
+
+Printing captures in µs means the timing tables for the report come straight off the terminal.
 
 ## For the project sheet
 
@@ -60,9 +120,9 @@ Pt-51 board).
 
 1. **See the signal** — TSOP wired, LED4 mirrors IR_IN. Proves receiver
    works before any capture logic.
-2. **Capture** — record a burst, show edge count. `ir_capture()` is
+2. **Capture** — record a burst, print it over UART. `ir_record()` is
    written; verify `n_edges` lands around 67 for a NEC remote.
-3. **Carrier** — PCA high-speed output generating 38 kHz on P1.4,
+3. **Carrier** — Timer 2 clock-out generating 38 kHz on P1.0,
    verified on a scope. Save the scope shot for the report.
 4. **Replay** — full record → replay against a real TV/AC. First demo.
 5. **Compatibility** — 150 ms silence window so one recording holds a
@@ -109,9 +169,23 @@ cd Project && make
 
 Lab: open `main.c` in MCU 8051 IDE, compile, flash the hex with FLIP.
 
-## Current state
+## Current state (22 Oct 2026)
 
-Scaffold compiles (sdcc 4.6.0). Capture and replay logic written but
-untested on hardware; `carrier_on()` is a placeholder until the PCA is
-configured. Buffer sits in the chip's 1 KB on-chip XRAM
-(`--xram-size 1024`).
+`main.c` is the dev build above: capture, replay, carrier control and dump over UART.
+Compiles to 1.4 KB code + 800 B XRAM.
+
+Verified in s51 (24 MHz) with a planted NEC-style capture:
+
+| Planted | Replayed |
+|---|---|
+| 9000 µs | 9007 µs |
+| 4500 | 4508 |
+| 560 | 566 |
+| 1690 | 1698 |
+| 560 | 563 |
+
+`REPLAY_FIX = 64` removes the measured 32 µs per-segment loop overhead.
+
+Next on hardware: roadmap step 1 (LED4 follows a remote), step 2 (`r` prints ~67
+durations for an NEC remote), step 3 (`c` shows 38 kHz on the scope), step 4 (`p`
+works a TV).
