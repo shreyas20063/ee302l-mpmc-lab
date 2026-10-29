@@ -76,6 +76,13 @@ would put 0.26 W into a ¼ W resistor during a flash.
 Transistor: BC547B, flat face toward you, legs C B E. Base resistor 1k (sheet) works with
 the 2.2k pull-up: about 1.3 mA of base current.
 
+**Perfboard version (29 Oct 2026).** Powering the soldered board from the Pt-51's 5V/GND
+with P1.0 not yet wired dimmed the LCD; unplugging the IR LED cured it. With P1.0 floating
+the 2.2k pull-up holds the transistor on, so the LED draws current continuously. Once the
+whole circuit, P1.0 included, was connected and main() drove `IR_OUT` low, the LCD stayed
+bright and record/send worked. Check: 3.4–3.7 V across the 100 Ω means 36 mA (correct);
+about 0 V across it while the LCD dims means the resistor is bypassed.
+
 ## Receiver: HS0038A2 (kit part, replaces the TSOP1738)
 
 Vishay HS0038A2, 38 kHz, active low, 4.5–5.5 V. With the lens facing you: 1 GND,
