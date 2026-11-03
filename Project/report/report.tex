@@ -371,7 +371,7 @@ $R_4$ and $C_1$ form the supply filter required by the receiver's datasheet. The
 
 \section{Firmware}
 
-The firmware is a single C file, \code{Project/main.c}, compiled with SDCC~\cite{sdcc}. It occupies \num{9110} bytes of the \qty{32}{\kilo\byte} flash. External RAM use is \num{1004} of \num{1024} bytes: \num{720} for the capture buffer, 180 for the loopback buffer and 104 for the slot table. The complete source is listed in Appendix~\ref{app:source}, and the line numbers on the excerpts below refer to that listing.
+The firmware is written in embedded C, as in the course's UART and SPI lab, and compiled for the 8051 with SDCC~\cite{sdcc}. It works directly on the 8051's special function registers, so each step stays close to the instructions that run: \code{T2MOD=0x02}, for example, compiles to the single instruction \code{MOV T2MOD,\#02H}. The program takes \num{9110} bytes of the \qty{32}{\kilo\byte} flash and \num{1004} of the \num{1024} bytes of external RAM (\num{720} for the capture buffer, 180 for the loopback buffer and 104 for the slot table). Appendix~\ref{app:source} lists the complete source, and the excerpts below carry its line numbers.
 
 \subsection{Resources}
 
@@ -679,7 +679,7 @@ To flash, put the board into boot mode by moving the switch to DETACH, holding B
 \section{Source listing}
 \label{app:source}
 
-\code{Project/main.c}, as flashed to the board.
+The complete firmware, as flashed to the board.
 
 \begin{multicols}{2}
 \lstinputlisting[style=full]{../main.c}
