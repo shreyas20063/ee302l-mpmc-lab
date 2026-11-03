@@ -1,0 +1,688 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{newtxtext,newtxmath}
+\usepackage[varqu,varl,scaled=0.95]{zi4}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{siunitx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{multicol}
+\usepackage{listings}
+\usepackage[american]{circuitikz}
+\usepackage[hidelinks]{hyperref}
+\usepackage{url}
+
+\definecolor{accent}{HTML}{1F3A5F}
+\definecolor{codebg}{HTML}{F5F6F8}
+\definecolor{codekw}{HTML}{1F3A5F}
+\definecolor{codestr}{HTML}{7A3E10}
+
+\sisetup{group-separator={,},group-minimum-digits=4,per-mode=symbol}
+\captionsetup{font=small,labelfont=bf,skip=6pt}
+\captionsetup[table]{position=top}
+\setlist{itemsep=2pt,topsep=4pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt plus 1pt}
+\renewcommand{\arraystretch}{1.15}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\newcommand{\code}[1]{\texttt{#1}}
+
+\titleformat{\section}{\Large\sffamily\bfseries\color{accent}}{\thesection}{0.7em}{}
+\titleformat{\subsection}{\large\sffamily\bfseries\color{accent}}{\thesubsection}{0.7em}{}
+\titlespacing*{\section}{0pt}{16pt}{6pt}
+\titlespacing*{\subsection}{0pt}{12pt}{4pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small IR Remote Cloner using 8051}
+\rhead{\small EE302L}
+\cfoot{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\lstdefinestyle{base}{
+  language=C,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{codekw}\bfseries,
+  stringstyle=\color{codestr},
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  numbersep=8pt,
+  morekeywords={__xdata,__code},
+  upquote=true,
+}
+\lstdefinestyle{snip}{
+  style=base,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{codebg},
+  xleftmargin=18pt,
+  framexleftmargin=4pt,
+  aboveskip=8pt,
+  belowskip=8pt,
+}
+\lstdefinestyle{full}{
+  style=base,
+  basicstyle=\ttfamily\fontsize{6.6}{7.7}\selectfont,
+  numberstyle=\fontsize{5}{6}\selectfont\color{gray},
+  numbersep=5pt,
+  xleftmargin=14pt,
+  breaklines=true,
+  breakatwhitespace=false,
+  postbreak=\mbox{\textcolor{gray}{$\hookrightarrow$}\space},
+}
+\lstdefinestyle{dump}{
+  language={},
+  basicstyle=\ttfamily\footnotesize,
+  columns=fullflexible,
+  keepspaces=true,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{codebg},
+  framexleftmargin=4pt,
+  xleftmargin=4pt,
+  aboveskip=8pt,
+  belowskip=8pt,
+  upquote=true,
+}
+
+\hypersetup{pdftitle={IR Remote Cloner using 8051},pdfauthor={Shreyas (EC24BT033), Yash (EC24BT041)},pdfsubject={EE302L semester project report}}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+\vspace*{3.2cm}
+{\large\sffamily EE302L Microprocessor and Microcontroller Lab\par}
+\vspace{0.3cm}
+{\large\sffamily Semester Project Report\par}
+\vspace{1.4cm}
+{\color{accent}\rule{\textwidth}{0.8pt}\par}
+\vspace{0.5cm}
+{\Huge\sffamily\bfseries\color{accent} IR Remote Cloner using 8051\par}
+\vspace{0.5cm}
+{\color{accent}\rule{\textwidth}{0.8pt}\par}
+\vspace{1.6cm}
+{\large
+\begin{tabular}{ll}
+Shreyas & EC24BT033\\
+Yash & EC24BT041\\
+\end{tabular}\par}
+\vspace{1.2cm}
+{\large Instructor: Prof.\ Samba Raju Chiluveru\par}
+\vspace{0.3cm}
+{\large Indian Institute of Technology Dharwad\par}
+\vspace{0.3cm}
+{\large November 2026\par}
+\vfill
+\begin{minipage}{0.88\textwidth}
+\small
+\textbf{Abstract.} This report describes an infrared remote cloner built on the Pt-51 development board (Atmel AT89C5131A, \qty{24}{\mega\hertz}). The device times the output of a \qty{38}{\kilo\hertz} IR receiver module, decodes NEC-format frames and stores up to eight buttons in on-chip EEPROM. On command it rebuilds a stored frame and transmits it through a transistor-driven IR LED, with Timer~2 clock-out generating the carrier. It runs without a computer, using three selector switches, two push buttons and a 16$\times$2 LCD. The measured carrier was \qty{37971}{\hertz} against a \qty{38}{\kilo\hertz} target, and a loopback self-test matched all 67 durations of a test frame to within \qty{200}{\micro\second}. Stored buttons controlled an Epson projector repeatedly, and saved codes remained intact after power-off and across a week between lab sessions. The final circuit is soldered and working.
+\end{minipage}
+\vspace{0.6cm}
+\end{titlepage}
+
+{\small\setlength{\parskip}{0pt}\tableofcontents}
+\newpage
+
+\section{Introduction}
+
+Most consumer electronics are controlled by an infrared remote that works with one device or one brand. An IR cloner learns what a remote sends and sends it again, so a single unit can stand in for the original.
+
+The 8051 suits this job because the signal is slow compared with its clock. The shortest event in an NEC remote frame lasts about \qty{560}{\micro\second}, which is 1,120 machine cycles on the Pt-51 (\qty{24}{\mega\hertz} crystal in X1 mode, \qty{0.5}{\micro\second} per machine cycle). The difficult part is the carrier: a \qty{38}{\kilo\hertz} wave has a half period of only about 26 machine cycles, too short to toggle comfortably in software while also timing the frame.
+
+The project set out to:
+\begin{itemize}
+\item capture a remote's button press using an IR receiver module and a hardware timer;
+\item decode NEC-format frames into an address and a command;
+\item store up to eight buttons in non-volatile memory;
+\item retransmit a stored button on a hardware-generated \qty{38}{\kilo\hertz} carrier;
+\item operate standalone with switches, buttons and an LCD; and
+\item include a self-test that needs neither a remote nor an oscilloscope.
+\end{itemize}
+
+All six were met and verified on hardware. The cloner stores NEC-format buttons only; Section~\ref{sec:limits} sets out this and the other limitations.
+
+\section{Background}
+
+\subsection{How IR remotes signal}
+
+A remote does not send data as plain on/off light. It switches its LED at a carrier frequency, commonly 36 to \qty{40}{\kilo\hertz}. A burst of carrier is called a \emph{mark} and an interval of darkness a \emph{space}, and the information is carried by their lengths. The carrier lets the receiver separate the signal from sunlight and room lighting.
+
+A receiver module such as the HS0038A2 contains a photodiode, an amplifier, a band-pass filter centred on \qty{38}{\kilo\hertz} and a demodulator. Its output is the envelope of the signal: low during a mark and high during a space~\cite{hs0038}. The microcontroller therefore never sees the carrier when receiving. Capturing a button reduces to timing the edges on one input pin, and transmitting reduces to applying the carrier to the LED for the same lengths of time.
+
+\subsection{NEC frame format}
+
+The NEC format~\cite{necproto} encodes each bit in the length of the space that follows a fixed-length mark. A frame carries 32 bits, least significant bit first: two address bytes, a command byte and the command's bitwise inverse. The original format sends the inverse of the address as the second byte; the extended format, used by the Epson remote in this project, uses both bytes as a 16-bit address. Table~\ref{tab:nec} lists the timings used in the firmware, which counts in \qty{0.5}{\micro\second} ticks.
+
+\begin{table}[H]
+\centering
+\caption{NEC timings as implemented in \code{nec\_build}.}
+\label{tab:nec}
+\begin{tabular}{lll}
+\toprule
+Element & Duration (\unit{\micro\second}) & Firmware ticks\\
+\midrule
+Lead & \num{9000} mark, \num{4500} space & \num{18000}, \num{9000}\\
+Logical 0 & 560 mark, 560 space & \num{1120}, \num{1120}\\
+Logical 1 & 560 mark, \num{1690} space & \num{1120}, \num{3380}\\
+Stop & 560 mark & \num{1120}\\
+Repeat code & \num{9000} mark, \num{2250} space, 560 mark & \num{18000}, \num{4500}, \num{1120}\\
+Frame period & \num{108000} & \num{216000}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A complete frame is therefore $2 + (2 \times 32) + 1 = 67$ durations. The value 67 is the first thing to check on any capture from an NEC remote.
+
+\section{Hardware}
+
+\subsection{Components}
+
+Table~\ref{tab:bom} lists the parts used. The original project sheet specified a TSOP1738 receiver and a \qty{47}{\ohm} LED resistor. The kit supplied the equivalent HS0038A2, and the resistor was raised to \qty{100}{\ohm} for the reason given in Section~\ref{sec:driver}.
+
+\begin{table}[H]
+\centering
+\caption{Bill of materials.}
+\label{tab:bom}
+\begin{tabularx}{\textwidth}{lcL}
+\toprule
+Part & Qty & Purpose\\
+\midrule
+Pt-51 board (AT89C5131A, \qty{24}{\mega\hertz}) & 1 & Microcontroller, selector switches, activity LED, power\\
+JHD162A 16$\times$2 LCD & 1 & Status display (HD44780-compatible)\\
+HS0038A2 IR receiver module & 1 & Demodulates \qty{38}{\kilo\hertz} IR to a logic signal\\
+IR LED, 5\,mm clear, \qty{940}{\nano\metre} & 1 & Transmitter\\
+BC547B NPN transistor & 1 & Switches the LED current\\
+Resistor, \qty{100}{\ohm} & 2 & LED current limit; receiver supply filter\\
+Resistor, \qty{1}{\kilo\ohm} & 1 & Transistor base\\
+Resistor, \qty{2.2}{\kilo\ohm} & 1 & Pull-up on P1.0\\
+Capacitor, \qty{4.7}{\micro\farad} electrolytic & 1 & Receiver supply filter\\
+Push button & 2 & SEND and REC\\
+USB-TTL converter & 1 & Development UART (not needed in standalone use)\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Circuit diagram}
+
+Figure~\ref{fig:ckt} shows the complete circuit. The transmitter, receiver and buttons are soldered on a separate board joined to the Pt-51 by six wires: \qty{5}{\volt}, GND, P1.0, P3.2, P3.3 and P3.5. Table~\ref{tab:wires} gives the same connections as a wire list, together with the pin order of the three-legged parts.
+
+\begin{figure}[H]
+\centering
+\makebox[\textwidth][c]{%
+\begin{circuitikz}[x=1cm,y=1cm,line width=0.5pt,every node/.style={font=\footnotesize}]
+\ctikzset{bipoles/thickness=1}
+\ctikzset{resistors/scale=0.75}
+\ctikzset{capacitors/scale=0.8}
+\ctikzset{diodes/scale=0.8}
+\ctikzset{monopoles/ground/width=0.22}
+
+\draw[dashed,gray] (-0.05,-1.0) rectangle (6.2,14.75);
+\node[anchor=north west,font=\footnotesize\sffamily\bfseries,text=gray!70!black] at (-0.05,14.7) {Pt-51 board};
+\draw[dashed,gray] (6.9,1.95) rectangle (15.8,14.75);
+\node[anchor=north east,font=\footnotesize\sffamily\bfseries,text=gray!70!black] at (15.75,14.7) {Soldered board};
+
+\draw[thick] (3.2,-0.3) rectangle (5.8,13.5);
+\node[align=center,font=\footnotesize\bfseries] at (4.5,8.3) {AT89C5131A};
+\node[align=center,font=\scriptsize] at (4.5,7.85) {24 MHz, X1 mode};
+
+\node[anchor=east] at (5.75,12.8) {+5\,V};
+\node[anchor=east] at (5.75,12.0) {GND};
+\node[anchor=east] at (5.75,9.6) {P1.0 (T2 out)};
+\node[anchor=east,font=\scriptsize,text=gray!60!black] at (5.75,9.2) {SW1 must be OFF};
+\node[anchor=east] at (5.75,6.0) {P3.2};
+\node[anchor=east] at (5.75,4.0) {P3.5};
+\node[anchor=east] at (5.75,2.7) {P3.3};
+\node[anchor=east] at (5.75,1.2) {P3.0 RxD};
+\node[anchor=east] at (5.75,0.4) {P3.1 TxD};
+
+\node[anchor=west] at (3.25,12.5) {P2.0--P2.7};
+\node[anchor=west] at (3.25,11.6) {P0.0};
+\node[anchor=west] at (3.25,10.9) {P0.1};
+\node[anchor=west] at (3.25,10.2) {P0.2};
+\node[anchor=west] at (3.25,6.9) {P1.1};
+\node[anchor=west] at (3.25,6.0) {P1.2};
+\node[anchor=west] at (3.25,5.1) {P1.3};
+\node[anchor=west] at (3.25,2.8) {P1.7};
+
+\draw[thick] (0.1,9.7) rectangle (2.1,13.2);
+\node[align=center] at (0.72,11.4) {LCD\\16$\times$2};
+\node[anchor=east] at (2.05,12.5) {D0--D7};
+\node[anchor=east] at (2.05,11.6) {RS};
+\node[anchor=east] at (2.05,10.9) {RW};
+\node[anchor=east] at (2.05,10.2) {EN};
+\draw[line width=1.4pt] (2.1,12.5) -- (3.2,12.5);
+\draw (2.55,12.33) -- (2.75,12.67);
+\node[above] at (2.65,12.6) {8};
+\draw (2.1,11.6) -- (3.2,11.6);
+\draw (2.1,10.9) -- (3.2,10.9);
+\draw (2.1,10.2) -- (3.2,10.2);
+
+\draw[thick] (0.1,4.5) rectangle (2.1,7.5);
+\node[align=center,font=\scriptsize] at (0.72,6.0) {ON =\\pin to\\GND};
+\node[anchor=east] at (2.05,6.9) {SW2};
+\node[anchor=east] at (2.05,6.0) {SW3};
+\node[anchor=east] at (2.05,5.1) {SW4};
+\draw (2.1,6.9) -- (3.2,6.9);
+\draw (2.1,6.0) -- (3.2,6.0);
+\draw (2.1,5.1) -- (3.2,5.1);
+
+\draw[thick] (0.1,2.2) rectangle (2.1,3.4);
+\node[align=center,font=\scriptsize] at (1.1,2.8) {LED4\\(IR activity)};
+\draw (2.1,2.8) -- (3.2,2.8);
+
+\draw (5.8,12.8) -- (7.4,12.8) -- (7.4,13.9) -- (13.0,13.9);
+\node[above] at (9.6,13.9) {+5\,V};
+\draw (5.8,12.0) -- (6.55,12.0) node[ground]{};
+
+\draw (8.0,13.9) to[short,*-] (8.0,12.3) to[R,l={$R_2$\ \qty{2.2}{\kilo\ohm}}] (8.0,10.4) -- (8.0,9.6);
+\draw (5.8,9.6) to[short,-*] (8.0,9.6) to[R,l={$R_3$\ \qty{1}{\kilo\ohm}}] (10.45,9.6);
+\node[npn] (Q1) at (11.2,9.6) {};
+\draw (10.45,9.6) -- (Q1.B);
+\node[anchor=west,align=left] at (11.45,9.6) {$Q_1$\\BC547B};
+\draw (Q1.E) -- ++(0,-0.25) node[ground]{};
+\draw (Q1.C |- 0,13.9) to[short,*-] (Q1.C |- 0,13.6) to[R,l={$R_1$\ \qty{100}{\ohm}}] (Q1.C |- 0,12.1) to[full led] (Q1.C |- 0,10.7) -- (Q1.C);
+\node[anchor=east,align=right] at ([xshift=-0.35cm]Q1.C |- 0,11.4) {$D_1$\\IR LED};
+
+\draw (13.0,13.9) -- (13.0,9.6) to[R,l={$R_4$\ \qty{100}{\ohm}}] (13.0,7.7) -- (13.0,7.0);
+\draw (13.0,7.7) to[short,*-] (14.55,7.7) to[eC] (14.55,4.8) node[ground]{};
+\node[anchor=west,align=left,font=\scriptsize] at (14.88,6.25) {$C_1$\\\qty{4.7}{\micro\farad}};
+\draw[thick] (12.2,5.0) rectangle (14.2,7.0);
+\node[anchor=north,font=\scriptsize] at (13.0,6.98) {2 VS};
+\node[anchor=west,font=\scriptsize] at (12.23,6.0) {3 OUT};
+\node[anchor=south,font=\scriptsize] at (13.0,5.02) {1 GND};
+\node[anchor=south east] at (12.9,7.03) {HS0038A2};
+\draw (13.0,5.0) -- (13.0,4.75) node[ground]{};
+\draw (5.8,6.0) -- (12.2,6.0);
+
+\draw (5.8,4.0) -- (8.2,4.0) to[nopb,l={SEND}] (9.8,4.0) node[ground]{};
+\draw (5.8,2.7) -- (8.2,2.7) to[nopb,l={REC}] (9.8,2.7) node[ground]{};
+
+\draw[thick] (8.4,-0.2) rectangle (11.4,1.6);
+\node[anchor=west,font=\scriptsize] at (8.45,1.2) {TXD};
+\node[anchor=west,font=\scriptsize] at (8.45,0.4) {RXD};
+\node[align=center,font=\scriptsize] at (10.3,0.75) {USB-TTL\\converter};
+\draw[-latex] (8.4,1.2) -- (5.8,1.2);
+\draw[-latex] (5.8,0.4) -- (8.4,0.4);
+\draw (10.3,-0.2) -- (10.3,-0.4) node[ground]{};
+\node[anchor=west,align=left,font=\scriptsize] at (11.55,0.7) {USB to computer\\(development only)};
+\end{circuitikz}%
+}
+\caption{Complete circuit. All ground symbols are one net, wired to a Pt-51 GND pin. The LCD, switches and LED4 are the Pt-51's own connections, used as in the course labs. On-board switch SW1 shares P1.0 and must stay OFF, because when ON it shorts the carrier to ground. For the carrier measurement in Section~\ref{sec:carrier-test} a temporary jumper joins P1.0 to P3.4.}
+\label{fig:ckt}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Connections to the Pt-51 and pin order of the three-legged parts.}
+\label{tab:wires}
+\begin{tabularx}{\textwidth}{llL}
+\toprule
+Signal & Pin & Connection\\
+\midrule
+Carrier output & P1.0 & Junction of $R_2$ and $R_3$; $R_3$ goes to the BC547B base\\
+Receiver input & P3.2 & HS0038A2 OUT (idles high, low during a mark)\\
+SEND & P3.5 & Push button to GND, internal pull-up\\
+REC & P3.3 & Push button to GND, internal pull-up\\
+Slot select & P1.1--P1.3 & On-board SW2--SW4; SW2 is the most significant bit\\
+Activity LED & P1.7 & On-board LED4, lit while the receiver sees IR\\
+LCD & P2, P0.0--P0.2 & Data; RS, RW, EN\\
+UART & P3.0, P3.1 & Converter TXD to RxD, RXD to TxD, grounds joined; 9600 8N1\\
+\midrule
+BC547B & & Flat face towards you, legs left to right: C, B, E\\
+HS0038A2 & & Lens towards you, legs left to right: 1 GND, 2 VS, 3 OUT\\
+IR LED & & Long leg is the anode (to $R_1$), short leg the cathode (to collector)\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The HS0038A2's pin order differs from that of the newer HS0038B (OUT, GND, VS), so the suffix must be checked before wiring.
+
+\subsection{LED driver design}
+\label{sec:driver}
+
+A port pin cannot drive the LED directly. Port~1 sources only tens of microamps when high, so the BC547B is used as a switch, with an external \qty{2.2}{\kilo\ohm} pull-up supplying its base current. Taking $V_F = \qty{1.3}{\volt}$ for the LED and $V_{CE(\mathrm{sat})} = \qty{0.1}{\volt}$, both assumed values rather than measurements:
+\begin{align*}
+I_{LED} &= \frac{5 - 1.3 - 0.1}{100} = \qty{36}{\milli\ampere} \\[2pt]
+I_B &= \frac{5 - 0.7}{\qty{2.2}{\kilo\ohm} + \qty{1}{\kilo\ohm}} = \qty{1.34}{\milli\ampere} \\[2pt]
+\beta_{\mathrm{forced}} &= \frac{36}{1.34} \approx 27
+\end{align*}
+The forced gain is far below the BC547B's minimum $h_{FE}$ of 200~\cite{bc547}, so the transistor saturates, and \qty{36}{\milli\ampere} is well inside its \qty{100}{\milli\ampere} collector rating. During a mark the carrier has a \qty{50}{\percent} duty cycle, so the average LED current is about \qty{18}{\milli\ampere}. When P1.0 is low the pin sinks about \qty{2.3}{\milli\ampere} through $R_2$ and the transistor turns off.
+
+The \qty{47}{\ohm} value on the original sheet was rejected because every port pin is high during reset and boot mode, which leaves the LED fully on until \code{main()} drives P1.0 low. At \qty{47}{\ohm} that would mean about \qty{77}{\milli\ampere} and \qty{0.28}{\watt} in a \qty{0.25}{\watt} resistor throughout a flash. At \qty{100}{\ohm} the resistor dissipates \qty{0.13}{\watt}.
+
+\subsection{Receiver supply filter}
+
+$R_4$ and $C_1$ form the supply filter required by the receiver's datasheet. Their corner frequency is $1/(2\pi R_4 C_1) \approx \qty{340}{\hertz}$, which keeps supply noise out of the receiver, including the LED's \qty{38}{\kilo\hertz} switching current on the same \qty{5}{\volt} rail.
+
+\section{Firmware}
+
+The firmware is a single C file, \code{Project/main.c}, compiled with SDCC~\cite{sdcc}. It occupies \num{9110} bytes of the \qty{32}{\kilo\byte} flash. External RAM use is \num{1004} of \num{1024} bytes: \num{720} for the capture buffer, 180 for the loopback buffer and 104 for the slot table. The complete source is listed in Appendix~\ref{app:source}, and the line numbers on the excerpts below refer to that listing.
+
+\subsection{Resources}
+
+\begin{table}[H]
+\centering
+\caption{Allocation of on-chip resources.}
+\label{tab:res}
+\begin{tabularx}{\textwidth}{llL}
+\toprule
+Resource & Mode & Use\\
+\midrule
+Timer 0 & Mode 1, \qty{0.5}{\micro\second} ticks & Measures marks and spaces, times replay, and provides \code{delay\_ms}. Counts carrier edges on P3.4 during the carrier measurement\\
+Timer 1 & Mode 2, TH1 = F3H, SMOD = 1 & UART at 9615 baud (nominal 9600)\\
+Timer 2 & Clock-out on P1.0 & \qty{38}{\kilo\hertz} carrier\\
+PCA counter & CMOD = 0, \qty{0.5}{\micro\second} ticks & Second clock for the loopback test; gate time for the carrier measurement\\
+EEPROM & Page 0 & Slot table (104 of 128 bytes)\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+No interrupts are used. The device does one thing at a time, so polling keeps the timing loops free of interrupt jitter. After initialisation, \code{main()} loops over four tasks: copy the receiver state to LED4, check the two buttons, refresh the LCD if the switches have changed, and act on any UART command. Because \code{delay\_ms} borrows Timer~0, the LCD is only updated between captures and replays, never inside a timing loop.
+
+\subsection{Carrier generation}
+
+The original plan was to use the PCA, but its fastest PWM is about \qty{23}{\kilo\hertz}, and its toggle mode would need an interrupt every \qty{13}{\micro\second}. Timer~2 clock-out produces a \qty{50}{\percent} square wave on P1.0 entirely in hardware. Timer~2 runs continuously, and the firmware only sets or clears T2OE at each mark and space boundary.
+
+\lstinputlisting[style=snip,firstline=211,lastline=232,firstnumber=211]{../main.c}
+
+The datasheet~\cite{at89c5131} gives the clock-out frequency in terms of $F_{\mathrm{CLK\,PERIPH}}$, which we first took to be \qty{12}{\mega\hertz} in X1 mode. Measurement showed otherwise: RCAP2 = FFB1H, calculated to give \qty{38}{\kilo\hertz}, produced \qty{75950}{\hertz}. The relation that matches the hardware is
+\[
+f = \frac{\qty{24}{\mega\hertz}}{4\,(65536 - \mathrm{RCAP2})}
+\]
+Table~\ref{tab:carrier} gives the resulting reload values. The firmware starts at \qty{38}{\kilo\hertz}, and the UART \code{q} command cycles through the three settings.
+
+\begin{table}[H]
+\centering
+\caption{Carrier reload values.}
+\label{tab:carrier}
+\begin{tabular}{cccll}
+\toprule
+Target & $65536 - \mathrm{RCAP2}$ & RCAP2 & Calculated & Measured\\
+\midrule
+\qty{36}{\kilo\hertz} & 167 & FF59H & \qty{35928}{\hertz} & not measured\\
+\qty{38}{\kilo\hertz} & 158 & FF62H & \qty{37975}{\hertz} & \textbf{\qty{37971}{\hertz}}\\
+\qty{40}{\kilo\hertz} & 150 & FF6AH & \qty{40000}{\hertz} & not measured\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Capture}
+
+\code{ir\_record} waits for the first falling edge on P3.2, then runs the loop below. Each time the pin changes level, the elapsed time is stored and Timer~0 restarts. Timer overflows are counted so that long gaps can be measured.
+
+\lstinputlisting[style=snip,firstline=340,lastline=363,firstnumber=340]{../main.c}
+
+Durations are stored in 16 bits. Values under \qty{16.4}{\milli\second} are stored directly in ticks. Longer gaps are stored as \code{8000H | (ticks/64)}, which gives \qty{32}{\micro\second} steps up to about \qty{1}{\second}. Capture ends after five timer overflows (\qty{164}{\milli\second} of silence) or at the 360-duration limit of the buffer. A capture of fewer than eight durations is discarded and the recorder keeps waiting, which rejects stray flashes.
+
+The timer resolves \qty{0.5}{\micro\second}, but the polling loop limits the real resolution. In the raw dump of Section~\ref{sec:epson}, every value after the lead mark differs from the others by a multiple of \qty{9}{\micro\second}, which puts one pass of the loop at about 18 machine cycles. This is far finer than the \qty{560}{\micro\second} elements being measured.
+
+\subsection{NEC decoding and rebuilding}
+
+\code{nec\_decode} accepts a capture only if it has at least 67 durations, a lead mark of 7 to \qty{11}{\milli\second} and a lead space of 3.5 to \qty{5.5}{\milli\second}. A data space longer than \qty{1.1}{\milli\second} is read as a~1. The command is validated by checking that it XORs with its inverse to give FFH. The address is not checked, because extended NEC uses both bytes freely.
+
+A saved button is not replayed from its capture. \code{nec\_build} regenerates the frame from the three stored bytes:
+
+\lstinputlisting[style=snip,firstline=424,lastline=455,firstnumber=424]{../main.c}
+
+This approach has three benefits. Each button needs only three bytes instead of 134. The transmitted timing is nominal and free of the distortion the receiver adds during capture (Section~\ref{sec:loopback}). A repeat code is also appended after the \qty{108}{\milli\second} frame period, so that the transmission looks like a complete short key press. The cost is that only NEC-format buttons can be stored.
+
+\subsection{Replay}
+
+\code{ir\_replay} walks through the durations, turning the carrier on for even entries (marks) and off for odd entries (spaces). \code{wait\_ticks} splits long waits into chunks of at most \qty{30}{\milli\second}. Calculating and setting up each wait takes time, so \code{REPLAY\_FIX} subtracts 212 ticks (\qty{106}{\micro\second}) from every duration. This value was calibrated in the s51 simulator. A raw capture held in RAM can also be replayed with the UART \code{p} command, with an optional correction that shortens marks by \qty{90}{\micro\second} and lengthens spaces by \qty{70}{\micro\second} to offset the receiver's distortion.
+
+\subsection{EEPROM slot storage}
+
+The AT89C5131A has \qty{1}{\kilo\byte} of data EEPROM in 128-byte pages, accessed with \code{MOVX}~\cite{at89c5131}. Slots are stored at \code{13$\times$i} in page~0, in the format of Table~\ref{tab:slot}. The table is loaded into external RAM at boot and rewritten in full on every save.
+
+\begin{table}[H]
+\centering
+\caption{Layout of one 13-byte slot. Eight slots use 104 bytes.}
+\label{tab:slot}
+\begin{tabular}{cll}
+\toprule
+Offset & Field & Note\\
+\midrule
+0 & Used flag & Must be exactly 01H; blank EEPROM reads FFH\\
+1, 2 & Address bytes & As received\\
+3 & Command & The inverse is recomputed when sending\\
+4--12 & Name & Up to 8 characters and a terminating zero\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+To write, the firmware sets EEE in EECON, moves bytes into the page latches with \code{MOVX}, writes 52H and then A2H to EECON to start programming, and waits for EEBUSY to clear. To read, it also sets the M0 bit in AUXR, which stretches the \code{MOVX} cycle.
+
+\lstinputlisting[style=snip,firstline=487,lastline=511,firstnumber=487]{../main.c}
+
+\subsection{LCD}
+
+The LCD uses the same 8-bit interface as the course labs, and its HD44780-compatible controller~\cite{hd44780} is initialised with 38H, 0CH, 01H and 06H. Enable is held high for \qty{1}{\milli\second}, and 38H is sent twice after a \qty{50}{\milli\second} power-up wait. The reason is covered in Section~\ref{sec:problems}. Lines are overwritten and padded to 16 characters instead of clearing the display, which avoids flicker.
+
+\subsection{Operation}
+
+Table~\ref{tab:ui} describes standalone use and Table~\ref{tab:uart} the UART commands used for development. The switches are read only when a button is pressed, so the slot number can be changed freely between sends. The LCD shows the current selection live.
+
+\begin{table}[H]
+\centering
+\caption{Standalone controls. SW2--SW4 select the slot: 000 is slot 1 and 111 is slot 8, with ON = 1.}
+\label{tab:ui}
+\begin{tabularx}{\textwidth}{lL}
+\toprule
+Action & Result\\
+\midrule
+Press and release REC, then press a remote button & Records into the selected slot. The slot is named after its code, for example \code{8355-90}\\
+Press REC again while waiting & Cancels the recording\\
+Hold REC for \qty{3}{\second} & Erases the selected slot\\
+Press SEND & Sends the selected slot once\\
+Hold SEND for more than \qty{1}{\second} & Sends the slot, then sends it again \qty{6}{\second} after the first press\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{UART commands (9600 8N1).}
+\label{tab:uart}
+\begin{tabularx}{\textwidth}{lL}
+\toprule
+Key & Action\\
+\midrule
+\code{r} & Record. An NEC capture can then be saved to a slot with a typed name\\
+\code{1}--\code{8} & Send that slot\\
+\code{L}, \code{e} & List slots; erase a slot\\
+\code{p}, \code{o} & Replay the last raw capture; the same twice, \qty{6}{\second} apart\\
+\code{d} & Print the last capture in microseconds\\
+\code{t}, \code{l} & Load the NEC test frame; run the loopback self-test\\
+\code{f} & Measure the carrier (needs the P1.0 to P3.4 jumper)\\
+\code{q}, \code{k} & Cycle the carrier through 36, 38 and \qty{40}{\kilo\hertz}; toggle the raw replay correction\\
+\code{c}, \code{x} & Carrier on and off continuously\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Testing and results}
+
+Table~\ref{tab:results} summarises the tests. Those marked ``board'' ran on the Pt-51 hardware, and those marked ``s51'' ran in the $\mu$Csim simulator, which executes the real firmware but does not model the EEPROM, PCA or Timer~2 clock-out. No oscilloscope captures were taken; the carrier was measured by the board itself.
+
+\begin{table}[H]
+\centering
+\caption{Summary of results.}
+\label{tab:results}
+\begin{tabularx}{\textwidth}{llL}
+\toprule
+Test & Where & Result\\
+\midrule
+Carrier frequency & Board & \qty{37971}{\hertz} against a \qty{38000}{\hertz} target ($-$\qty{0.08}{\percent})\\
+Loopback self-test & Board & 67 of 67 durations within \qty{200}{\micro\second}\\
+NEC frame generation & s51 & 71 durations, frame plus gap \qty{107.98}{\milli\second}, decodes to 04 FB 08 F7\\
+Replay timing & s51 & Within \qty{4}{\micro\second} up to \qty{9}{\milli\second}; $+$\qty{50}{\micro\second} on a \qty{40}{\milli\second} gap\\
+Real device & Board & Epson projector controlled repeatedly at distances up to about \qty{1}{\metre}\\
+Non-volatile storage & Board & Slots intact after power-off and after a week between labs\\
+Soldered circuit & Board & Record and send work; LCD normal\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Carrier frequency}
+\label{sec:carrier-test}
+
+With a jumper from P1.0 to P3.4, the \code{f} command runs Timer~0 as a counter on the carrier for four PCA overflows, a gate time of \qty{131.072}{\milli\second}. The frequency is then $\mathrm{count} \times 15625 / 2048$, so one count is worth \qty{7.63}{\hertz}. The result of \qty{37971}{\hertz} corresponds to \num{4977} counts, against \num{4977.4} expected for the calculated \qty{37975}{\hertz}, so the two agree to within the instrument's resolution.
+
+\subsection{Loopback self-test}
+\label{sec:loopback}
+
+The \code{t} and \code{l} commands transmit a built-in NEC test frame (address 04, command 08) while timing the board's own receiver, using the PCA as a second clock because Timer~0 is busy timing the transmission. With the LED aimed at the receiver lens from 10 to \qty{30}{\centi\metre}, all 67 durations were heard and all 67 fell within \qty{200}{\micro\second} of the value sent. The difference between sent and received durations measures the receiver's distortion:
+
+\begin{table}[H]
+\centering
+\caption{Receiver distortion measured in the loopback test.}
+\label{tab:distortion}
+\begin{tabular}{lcc}
+\toprule
+ & Average & Range\\
+\midrule
+Marks & $+$\qty{90}{\micro\second} & $+$37 to $+$\qty{136}{\micro\second}\\
+Spaces & $-$\qty{70}{\micro\second} & $-$114 to $-$\qty{19}{\micro\second}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The loopback proves the transmit and receive chain, but not the carrier frequency. When the carrier was still wrong at \qty{75950}{\hertz}, the same test matched 66 of 67 at close range, so it does not replace the measurement in Section~\ref{sec:carrier-test}. These loopback figures come from a development build with \code{REPLAY\_FIX} = 64. The constant was recalibrated when replay was rewritten to handle long gaps, and the loopback was not repeated after that change.
+
+\subsection{Replay timing in simulation}
+
+A planted code was replayed in s51, and the time between each carrier on and off switching was measured.
+
+\begin{table}[H]
+\centering
+\caption{Replay timing in s51.}
+\label{tab:replay}
+\begin{tabular}{cccccc}
+\toprule
+Target (\unit{\micro\second}) & \num{9000} & \num{4500} & 560 & \num{40000} & 560\\
+Replayed (\unit{\micro\second}) & \num{8999} & \num{4500} & 559 & \num{40050} & 556\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Real device: Epson projector}
+\label{sec:epson}
+
+The test device was an Epson projector. This is the raw dump of its remote's POWER button, in microseconds, alternating mark and space:
+
+\begin{lstlisting}[style=dump]
+67 durations, microseconds (mark space mark ...):
+9161 4360 670 1561 670 1552 670 427 670 427
+670 427 670 427 670 418 670 1561 697 1525
+670 427 697 1534 697 400 670 1552 697 400
+697 1525 697 400 697 400 697 400 670 427
+688 400 697 1534 697 400 697 391 697 1534
+697 1534 688 1534 697 1534 688 1534 697 400
+697 1525 697 1534 697 400 697
+\end{lstlisting}
+
+It decodes to the bytes \code{83 55 90 6F}: extended NEC address 83 55 and command 90, with a valid check byte. Marks ranged from 670 to \qty{697}{\micro\second} (mean 687), short spaces from 391 to \qty{427}{\micro\second} (mean 410) and long spaces from 1525 to \qty{1561}{\micro\second} (mean 1538). Marks read long and spaces short, in the same direction as the loopback distortion but by more; we did not separate the receiver's contribution from the remote's own timing. The \qty{1.1}{\milli\second} decision threshold sits well clear of both groups of spaces.
+
+POWER, SOURCE and the selection and arrow keys were recorded into slots using REC and sent using SEND. The projector responded repeatedly, at distances up to about \qty{1}{\metre}. It asks for confirmation before powering off and needs a second POWER press, which is what holding SEND provides. One replay after the cool-down turned it back on.
+
+Aim proved to be the main variable. A few degrees off at \qty{1}{\metre} was enough to lose the signal, consistent with the narrow beam of a 5\,mm LED (we estimate about $\pm$\ang{20}; it was not measured). Early raw replays spaced 1 and \qty{3}{\second} apart only brought up the confirmation dialog, while \qty{6}{\second} apart turned the projector off, and we first read this as a lock-out in the projector. Repeated sends later worked once the LED was aimed properly, so at least part of that failure was aim. We did not establish whether a lock-out exists.
+
+\subsection{Non-volatile storage}
+
+The EEPROM path cannot be simulated, so it was tested only on the board. Saved slots were still present and working after a full power-off, and again a week later at the next lab session.
+
+\subsection{Soldered circuit}
+
+The final circuit was transferred from breadboard to a soldered board, and record and send both work on it. One fault appeared during bring-up and is described in Table~\ref{tab:problems}.
+
+\section{Problems and fixes}
+\label{sec:problems}
+
+\begin{table}[H]
+\centering
+\caption{Problems found during development.}
+\label{tab:problems}
+\small
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.7cm}LL}
+\toprule
+Symptom & Cause & Fix\\
+\midrule
+Carrier at \qty{75950}{\hertz} instead of \qty{38}{\kilo\hertz} & Clock-out divider runs from the full \qty{24}{\mega\hertz}, not the \qty{12}{\mega\hertz} we read from the datasheet & RCAP2 = FF62H; measured \qty{37971}{\hertz}\\
+Loopback unstable (43 to 75 durations heard for 67 sent) & LED shining at the side of the receiver, outside its $\pm$\ang{45} response~\cite{hs0038} & Aimed at the lens from 10--\qty{30}{\centi\metre}; 67 of 67\\
+A capture of one \qty{314}{\micro\second} duration & Stray IR flash near the projector lamp started the recorder & Captures under eight durations are discarded\\
+Garbled UART text & Converter ground not properly common with the board & Converter GND wired directly to a Pt-51 GND pin\\
+LCD line 2 blank & EN is on P0, which is open-drain with a slow external pull-up. A \qty{0.5}{\micro\second} pulse was missed, so the first 38H was lost and the LCD stayed in one-line mode & EN held high for \qty{1}{\milli\second}; 38H sent twice after a \qty{50}{\milli\second} wait\\
+SW1 unusable as an enable input & P1.0 is the only Timer~2 clock-out pin, and SW1 ON grounds it & Control moved to push buttons on P3.5 and P3.3\\
+Projector not responding to some sends & LED beam missing the projector's sensor & Aim the LED; no firmware change needed\\
+LCD dim when the soldered board was powered with P1.0 unwired; cured by unplugging the LED & With P1.0 floating, $R_2$ holds the transistor on, so the LED conducts continuously & Connect P1.0 so that \code{main()} holds it low. The LCD then stays bright. The LED current was not measured, so this explanation is inferred\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Limitations and future work}
+\label{sec:limits}
+
+\begin{itemize}
+\item \textbf{NEC only in slots.} A non-NEC capture stays in RAM, can be replayed only with the UART \code{p} command and is lost at reset. Only NEC hardware was tested, so behaviour with Sony, RC-5 or air-conditioner remotes is unverified.
+\item \textbf{One test device.} The only real target was one Epson projector. There was no formal range test, and working distances were about \qty{1}{\metre} with careful aim.
+\item \textbf{Measured at one carrier only.} The 36 and \qty{40}{\kilo\hertz} settings are calculated, not measured. The carrier is a global setting that resets to \qty{38}{\kilo\hertz}, not a per-slot property.
+\item \textbf{No oscilloscope record.} Timing evidence comes from the on-board counter, the loopback and the simulator.
+\item \textbf{Clipped status line.} Line 2 of the home screen is 19 characters long and the display has 16, so it reads \code{IR 38kHz  3/8 SA} instead of ending in \code{SAVED}. This is cosmetic and has not been changed.
+\item \textbf{Naming.} A slot recorded with REC is named after its code; a text name can be entered only over the UART.
+\end{itemize}
+
+Natural extensions are raw slots for non-NEC remotes (a 67-duration raw frame takes 134 bytes, so the \qty{1}{\kilo\byte} EEPROM would hold about seven), a stored carrier per slot, and a second \qty{100}{\ohm} resistor in parallel with $R_1$ (about \qty{72}{\milli\ampere}) for more range and a wider usable angle.
+
+\section{Conclusion}
+
+The project produced a working standalone IR cloner on the Pt-51. It records an NEC remote button, stores it in EEPROM, and retransmits it on a hardware-generated carrier measured at \qty{37971}{\hertz}, controlling a real projector. The most useful design choices were using Timer~2 clock-out, which removes the carrier from the software's timing burden, and rebuilding frames from decoded bytes, which removes the receiver's timing distortion and reduces storage to three bytes per button. Measuring on the hardware instead of trusting our reading of the datasheet found the carrier error, and the loopback test provided a repeatable check of the signal chain without any external instrument.
+
+\begin{thebibliography}{9}
+\bibitem{at89c5131} Atmel (now Microchip Technology), \emph{AT89C5131A 8-bit Flash Microcontroller with Full-Speed USB Device}, datasheet.
+\bibitem{hs0038} Vishay Semiconductors, \emph{HS0038A2 IR Receiver Module}, datasheet.
+\bibitem{bc547} \emph{BC546/BC547/BC548 NPN General-Purpose Transistors}, manufacturer's datasheet.
+\bibitem{necproto} SB-Projects, \emph{IR Remote Control Theory: NEC Protocol}, \url{https://www.sbprojects.net/knowledge/ir/nec.php}.
+\bibitem{hd44780} Hitachi, \emph{HD44780U Dot Matrix Liquid Crystal Display Controller/Driver}, datasheet.
+\bibitem{sdcc} SDCC project, \emph{SDCC Compiler User Guide}, \url{https://sdcc.sourceforge.net/doc/sdccman.pdf}.
+\bibitem{deck} EE302L course material, \emph{Microprocessor and Microcontroller Lab}, IIT Dharwad (Pt-51 board setup and flashing).
+\end{thebibliography}
+
+\appendix
+
+\section{Build and flash}
+
+The firmware is built with SDCC, which ships the \code{AT89C513xA.h} header. From the \code{Project} folder:
+
+\begin{lstlisting}[style=dump]
+sdcc -mmcs51 --xram-size 1024 main.c
+packihx main.ihx > main.hex
+\end{lstlisting}
+
+To flash, put the board into boot mode by moving the switch to DETACH, holding BOOT, tapping RESET, releasing BOOT and moving the switch back to ATTACH. Then program the board using FLIP in the lab~\cite{deck}, or \code{dfu-programmer} on macOS with target \code{at89c5131}. Press RESET afterwards to run the program.
+
+\newpage
+\section{Source listing}
+\label{app:source}
+
+\code{Project/main.c}, as flashed to the board.
+
+\begin{multicols}{2}
+\lstinputlisting[style=full]{../main.c}
+\end{multicols}
+
+\end{document}

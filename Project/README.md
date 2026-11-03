@@ -1,5 +1,7 @@
 # IR Remote Cloner using 8051
 
+**Status: complete and working on a soldered board. Report: [report/report.pdf](report/report.pdf).**
+
 Semester project, EE302L. Point any IR remote at the board and press
 **record** — it captures the signal. Press **replay** — the board becomes
 that remote.
@@ -146,8 +148,9 @@ recomputed), 4 + 9 bytes per slot with the name. 8 slots = 104 bytes in EEPROM p
 (the chip has 1 KB of data EEPROM in 128-byte pages). To write: set EEE in EECON, MOVX the
 bytes into the page latches, write 52H then A2H to EECON, and wait for EEBUSY to clear. To
 read: EEE plus AUXR.M0 (stretched MOVX). A blank EEPROM reads FFH, so the used flag must be
-exactly 01H. The slots are loaded at boot and survive resets, power-off and probably
-reflashing (DFU erase targets the flash).
+exactly 01H. The slots are loaded at boot and survive resets and power-off, confirmed on the board:
+they lasted a full week between labs. They probably survive reflashing too (DFU erase
+targets the flash).
 
 Replaying a rebuilt frame instead of the raw capture gives textbook NEC timing, free of the
 receiver's +90/−70 µs distortion, and the repeat pulse makes it a complete keypress. In s51
@@ -298,7 +301,5 @@ repeat pulses) are stored as `8000H | ticks/64` (32 µs steps, up to 1 s). Captu
 9000/4500/560/40000/560 µs code replays as 8999/4500/559/40050/556 µs. The loopback
 compares the first frame only.
 
-This build (164 ms capture, `o`, `REPLAY_FIX` 212) is verified in s51, not yet flashed.
-The board still runs the build that did the off/on above.
-
-Next: flash this build, range test, then the UI (LCD and buttons) and memory slots.
+This capture format and `REPLAY_FIX` 212 went on the board with the later builds. The
+final `main.c` (bd5f3e7) is what is flashed. No formal range test was done.
