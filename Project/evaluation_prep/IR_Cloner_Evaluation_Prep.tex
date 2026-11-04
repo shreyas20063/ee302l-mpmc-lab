@@ -356,7 +356,29 @@ Carrier jumper (only for \code{f}) & P1.0 to P3.4 & Remove it afterwards\\
 
 \textbf{Recording.} After REC, the firmware waits for the first low on P3.2, then uses Timer~0 (16-bit, \qty{0.5}{\micro\second} per tick) to time every level and stores each duration in external RAM. It stops after \qty{164}{\milli\second} of silence. Fewer than 8 durations counts as a stray flash and is ignored.
 
-\textbf{Decoding.} An NEC frame is a \qty{9}{\milli\second} mark and \qty{4.5}{\milli\second} space, then 32 bits, then a stop mark: 67 durations in total. Every bit starts with a \qty{560}{\micro\second} mark, and the space that follows gives its value: \qty{560}{\micro\second} for 0, \qty{1690}{\micro\second} for 1. The bytes, sent least significant bit first, are address, address, command and inverted command. Epson POWER is \mbox{\code{83 55 90 6F}}: address 83 55, command 90, and 6F is 90 inverted, which is the validity check.
+\textbf{Decoding.} An NEC frame is a \qty{9}{\milli\second} mark and \qty{4.5}{\milli\second} space, then 32 bits, then a stop mark: 67 durations in total. Every bit starts with a \qty{560}{\micro\second} mark, and the space that follows gives its value: \qty{560}{\micro\second} for 0, \qty{1690}{\micro\second} for 1. The four bytes are sent least significant bit first.
+
+\begin{center}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Byte & Epson POWER & Job\\
+\midrule
+Address 1 & \code{83} & Which device\\
+Address 2 & \code{55} & Which device\\
+Command & \code{90} & Which button\\
+Inverted command & \code{6F} & Error check: \code{90 XOR 6F = FF}\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{What the address is.} It says which device the frame is for. It is not a memory address, and it does not identify one particular remote. IR is a one-way broadcast: every receiver in the room hears every remote, with no pairing. On SPI we selected the MCP3008 with a CS wire, but IR has no wires, so the selection travels as data. The projector compares the address with its own stored value and ignores the frame if they differ, which is why a TV remote does not control it.
+
+\textbf{Why the command is sent twice.} The receiver cannot ask for a resend, and a corrupted bit could turn one button into another. So the command is followed by its inverse, and the two must XOR to FF. If they do not, the frame is dropped and the user just presses again. This detects errors but cannot fix them.
+
+\textbf{Why two address bytes.} Original NEC sends the address and then its inverse, which allows only 256 devices. Our remote gives \code{83 XOR 55 = D6}, not FF, so it uses extended NEC: both bytes form one 16-bit address, giving far more device IDs but no address check. That is why our decoder checks only the command pair; checking the address too would reject this remote as \code{NOT NEC}.
+
+\textbf{Why cloning works.} Nothing in these bytes says ``Epson''. The address is just a number stored in both the remote and the projector, with no secret or pairing, so the projector cannot tell our frame from the real remote's.
 
 \textbf{Storing.} Each slot takes 13 bytes: a used flag, three code bytes and a 9-byte name. Eight slots take 104 bytes of the chip's \qty{1}{\kilo\byte} EEPROM, which keeps its contents without power. The table is copied to RAM at start-up.
 
@@ -406,6 +428,8 @@ Why a \qty{38}{\kilo\hertz} carrier? & So the receiver's band-pass filter can re
 Why not toggle the pin in software? & The half period is \qty{13}{\micro\second}, about 26 machine cycles, which leaves too little time to do anything else. Timer~2 does it in hardware.\\
 Why a transistor? & A port pin cannot supply the LED current. The BC547B switches \qty{36}{\milli\ampere} using about \qty{1.3}{\milli\ampere} of base current.\\
 Why \qty{100}{\ohm} on the LED? & It sets the current. Pins are high during reset and boot, so the LED stays on until the program starts, and \qty{47}{\ohm} would exceed a \qty{0.25}{\watt} resistor's rating.\\
+What does the address mean? & It says which device the frame is for. IR is a broadcast with no select wire, so each receiver ignores frames whose address is not its own.\\
+Why send the inverted command? & The link is one-way, so there is no resend. Command XOR inverse must be FF, otherwise the frame is dropped.\\
 Why save the code, not the recording? & It needs 3 bytes instead of 134, and the rebuilt frame has exact timing without the receiver's distortion.\\
 Can it clone any remote? & No. It saves only NEC format. Others can be replayed from RAM over the laptop link, but that is untested on other brands.\\
 What is the range? & About \qty{1}{\metre} when aimed. We did no formal range test. The beam is narrow; a second \qty{100}{\ohm} in parallel would roughly double the current.\\
