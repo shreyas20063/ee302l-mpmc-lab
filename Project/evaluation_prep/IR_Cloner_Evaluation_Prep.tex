@@ -1,0 +1,418 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{newtxtext,newtxmath}
+\usepackage[varqu,varl,scaled=0.95]{zi4}
+\usepackage[a4paper,margin=2cm,top=2.2cm,bottom=2cm]{geometry}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{siunitx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage[american]{circuitikz}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{accent}{HTML}{1F3A5F}
+\definecolor{lcdbg}{HTML}{DDE8C8}
+\definecolor{note}{HTML}{F3F4F6}
+
+\sisetup{group-separator={,},group-minimum-digits=4,per-mode=symbol}
+\setlist{itemsep=2pt,topsep=3pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt plus 1pt}
+\renewcommand{\arraystretch}{1.2}
+\renewcommand{\tabularxcolumn}[1]{m{#1}}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\newcolumntype{D}{>{\centering\arraybackslash}m{2.55cm}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\lcd}[2]{{\setlength{\fboxsep}{2.5pt}\colorbox{lcdbg}{\parbox{2.25cm}{\raggedright\ttfamily\scriptsize\strut #1\\\strut #2}}}}
+
+\titleformat{\section}{\large\sffamily\bfseries\color{accent}}{\thesection}{0.6em}{}
+\titlespacing*{\section}{0pt}{12pt}{4pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small IR Remote Cloner: Evaluation Prep}
+\rhead{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\hypersetup{pdftitle={IR Remote Cloner: Evaluation Prep},pdfauthor={Shreyas and Yash}}
+
+\begin{document}
+
+{\LARGE\sffamily\bfseries\color{accent} IR Remote Cloner: Evaluation Prep\par}
+\vspace{2pt}
+{\small Shreyas (EC24BT033) and Yash (EC24BT041), EE302L, November 2026\par}
+\vspace{6pt}
+
+\section{Read this first}
+
+The evaluation checks that the cloner works, not the code. So the goal is a clean live demo, and both of us should be able to run it alone. Three things can spoil it:
+
+\begin{enumerate}
+\item \textbf{Aim.} Most failed sends during development were down to aim. The LED beam is narrow, and a few degrees off at \qty{1}{\metre} loses the projector. Stay within \qty{1}{\metre}, point the LED straight at the projector's IR sensor, and hold it there until the send finishes.
+\item \textbf{SW1 must be OFF.} SW1 shares P1.0 with the carrier. When it is ON, the carrier is shorted to ground and nothing is transmitted.
+\item \textbf{A remote that is not NEC format.} Only NEC buttons can be saved. Our only real test was the Epson remote, so read Section~\ref{sec:other} in case the professor hands us another one.
+\end{enumerate}
+
+\colorbox{note}{\parbox{\dimexpr\linewidth-2\fboxsep}{\textbf{The 30-second explanation.} This board learns a button from an IR remote and then replaces the remote. A receiver module gives the 8051 the timing of the signal. The 8051 decodes it and saves the code in on-chip EEPROM, so it survives power-off. To send, it rebuilds the frame and drives an IR LED with a \qty{38}{\kilo\hertz} carrier from Timer~2. There are 8 slots chosen with three switches, REC and SEND buttons, and an LCD for status. It needs no computer.}}
+
+\section{Before the evaluation}
+
+\textbf{Bring:} Pt-51 with LCD, soldered board and its six wires, USB cable and a power source, the Epson remote with working batteries, a written slot map, and the laptop, USB-TTL converter and jumpers for the optional tests.
+
+\textbf{The day before:}
+\begin{itemize}[label=$\square$]
+\item Confirm which projector and remote will be used. If it is not the Epson, test on that device first.
+\item Record the buttons and fill in the slot map (Section~\ref{sec:slots}). The LCD shows codes such as \code{8355-90}, not button names, so the map is the only record of which slot is which. Leave slot 8 empty for the live recording.
+\item Find the projector's IR sensor and the spot we will send from.
+\item Each of us runs the whole of Section~\ref{sec:demo} once alone, including the power cycle.
+\item Try any other remotes we can find, so we already know which ones give \code{NOT NEC}.
+\item If we might show the laptop tests, run them now (Section~\ref{sec:laptop}). The loopback has not been run on the final firmware yet.
+\item Do not reflash unless something is broken. Whether slots survive a reflash has never been tested.
+\end{itemize}
+
+\textbf{At the bench, before the professor arrives:}
+\begin{itemize}[label=$\square$]
+\item All six wires are firm, and SW1 is OFF.
+\item Power on and press RESET. Both LCD lines show, and the saved count is what we expect.
+\item Flip SW2--SW4: the LCD follows. Press a remote button at the receiver on the home screen: LED4 blinks.
+\item Send SOURCE once. The projector must be on and warmed up, not cooling down.
+\end{itemize}
+
+\newpage
+\section{Demo run sheet}
+\label{sec:demo}
+
+Slot numbers below assume the planned slot map. The second LCD line on the home screen is meant to end in \code{SAVED}, but the display cuts it off at 16 characters, so \code{SA} is normal. In a slot name, \code{xx} stands for that button's command byte. The whole demo runs without the laptop.
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}c L D L@{}}
+\toprule
+Step & Do & LCD shows & Result and what to say\\
+\midrule
+1 & Power on. Press RESET if the LCD is blank. & \lcd{SEL 1: 8355-90}{IR 38kHz~~7/8 SA} & Give the 30-second explanation. Line 1 is the selected slot, line 2 the carrier and saved count.\\
+\addlinespace
+2 & Flip SW2--SW4. & \lcd{SEL 2: 8355-xx}{IR 38kHz~~7/8 SA} & The selection updates live. The switches are only read when a button is pressed.\\
+\addlinespace
+3 & Select SOURCE, aim at the sensor, tap SEND. & \lcd{SENT SLOT 2}{8355-xx} & The projector changes source. Put the real remote down first so it is clear it is not in use.\\
+\addlinespace
+4 & Send an arrow key a few times. & \lcd{SENT SLOT 4}{8355-xx} & The menu moves each time, so repeated sends work.\\
+\addlinespace
+5 & Set slot 8 (ON ON ON). Press and release REC. & \lcd{SEL 8: EMPTY}{IR 38kHz~~7/8 SA}\par\vspace{2pt}\lcd{REC SLOT 8}{PRESS REMOTE...} & Live clone. The board is now waiting for a remote.\\
+\addlinespace
+6 & Point the remote at the receiver, shield it from the projector, press one button once. & \lcd{SAVED SLOT 8}{8355-xx} & It timed the signal, decoded it and saved it. The name is the code: address, then command.\\
+\addlinespace
+7 & Aim the LED, tap SEND. & \lcd{SENT SLOT 8}{8355-xx} & The projector does what that button does, so the clone works.\\
+\addlinespace
+8 & Unplug USB for a few seconds, plug it back in, then SEND again. & \lcd{SEL 8: 8355-xx}{IR 38kHz~~8/8 SA} & The count is unchanged and SEND still works. The codes are in EEPROM. They lasted a week between labs.\\
+\addlinespace
+9 & Do this last. Select POWER, aim, hold SEND for over \qty{1}{\second}, and keep aiming. & \lcd{DOUBLE PRESS}{WAIT 6 S...}\par\vspace{2pt}\lcd{SENT SLOT 1}{8355-90} & The projector asks for confirmation, and the second send \qty{6}{\second} after the first turns it off. It needs a cool-down before it will turn on again.\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+A few things to remember while running it:
+\begin{itemize}
+\item \textbf{REC overwrites} the selected slot without asking, and \textbf{holding REC for \qty{3}{\second} erases it}. Press and release promptly.
+\item \textbf{To cancel} a recording, press REC again. SEND does nothing while the board is waiting for a remote.
+\item \textbf{Press the remote after} the LCD says \code{PRESS REMOTE...}, once and briefly. The recording must start at the beginning of a frame.
+\item \textbf{LED4} follows the receiver only while the board is idle. It does not update during recording, so a dark LED4 at that point is normal.
+\end{itemize}
+
+\newpage
+\section{Slot map}
+\label{sec:slots}
+
+ON = 1 and SW2 is the most significant bit. Replace the planned buttons with what we actually record.
+
+\begin{center}
+\small
+\begin{tabular}{cccccll}
+\toprule
+Slot & SW2 & SW3 & SW4 & & Planned button & Code on LCD\\
+\midrule
+1 & OFF & OFF & OFF & & POWER & \code{8355-90}\\
+2 & OFF & OFF & ON & & SOURCE & \rule{1.8cm}{0.3pt}\\
+3 & OFF & ON & OFF & & ENTER & \rule{1.8cm}{0.3pt}\\
+4 & OFF & ON & ON & & UP & \rule{1.8cm}{0.3pt}\\
+5 & ON & OFF & OFF & & DOWN & \rule{1.8cm}{0.3pt}\\
+6 & ON & OFF & ON & & LEFT & \rule{1.8cm}{0.3pt}\\
+7 & ON & ON & OFF & & RIGHT & \rule{1.8cm}{0.3pt}\\
+8 & ON & ON & ON & & Empty, for the live demo & \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{If something goes wrong}
+\label{sec:trouble}
+
+Check aim first. It has been the most common cause by far.
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{4.3cm} L L@{}}
+\toprule
+Symptom & Likely cause & Do this\\
+\midrule
+\code{SENT SLOT n} shows but the projector ignores it & Aim & Move within \qty{1}{\metre}, aim at the sensor, try a few angles\\
+Still nothing after re-aiming & LED not firing: SW1 ON, or P1.0 wire loose & SW1 OFF, check the wire. Watch the LED through a phone camera while pressing SEND; IR shows as a brief flash. Some cameras filter IR, so check that it sees the real remote first\\
+\code{SLOT n EMPTY} & Wrong slot selected & Check the switches against the slot map\\
+Projector shows the power-off dialog and stops there & It needs a second press & Hold SEND for over \qty{1}{\second} and keep aiming, or tap SEND again\\
+Projector will not turn back on & Still cooling down & Wait, then tap SEND once\\
+\code{PRESS REMOTE...} never changes & Receiver not seeing the remote & Press REC to cancel. On the home screen, press the remote: LED4 should blink. If not, check the batteries and the receiver wiring\\
+\code{NOT NEC} with the Epson remote & Pressed too early or held down, or a stray signal & Retry with one short press after the prompt, close to the receiver and away from the lamp\\
+\code{NOT NEC} with another remote & Probably not NEC format & See Section~\ref{sec:other}\\
+LCD blank & Program not started & Press RESET, check the LCD is seated, adjust the contrast trimmer\\
+LCD line 2 missing & LCD start-up & Unplug, plug back in, press RESET\\
+LCD dim when the soldered board is connected & P1.0 unwired, so $R_2$ holds the LED on & Connect P1.0 and press RESET. If it stays dim, check $R_1$ is \qty{100}{\ohm} and not bridged by solder\\
+Saved count is 0 & EEPROM is on the chip, so a swapped board has no slots & Re-record the buttons\\
+Garbled text on the laptop & Converter ground not connected & Wire converter GND straight to a Pt-51 GND pin; 9600 8N1\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\textbf{Last resort, reflash:} move the switch to DETACH, hold BOOT, tap RESET, release BOOT, move to ATTACH. Then run \code{make flash} in \code{Project} on the Mac, or load \code{main.hex} with FLIP on a lab PC, and press RESET. Expect to re-record if the slots are lost.
+
+\newpage
+\section{If the professor brings another remote}
+\label{sec:other}
+
+Set slot 8 and press REC as usual. One of two things happens:
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}D L@{}}
+\toprule
+LCD shows & What it means\\
+\midrule
+\lcd{SAVED SLOT 8}{xxxx-xx} & It is NEC format, so run the normal demo. To control a different device, the LED must be aimed at that device.\\
+\addlinespace
+\lcd{NOT NEC}{NOT SAVED} & The slot is left unchanged. Say it plainly: the board received the signal, but it decodes and stores only the NEC format, and that is a known limit of the project.\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+As general protocol knowledge, not something we tested: LG TVs and many generic remotes use NEC, while Sony (SIRC, \qty{40}{\kilo\hertz}), Philips (RC-5, \qty{36}{\kilo\hertz}), most Samsung TVs and air conditioners usually do not.
+
+\textbf{Fallback with the laptop:} key \code{r} records, and if the frame is not NEC it stays in RAM as a raw capture until reset. Key \code{p} replays it, and \code{q} steps the carrier through 36, 38 and \qty{40}{\kilo\hertz}. This has only been used on the Epson remote, so try it beforehand and do not promise it will work.
+
+\section{Optional laptop tests}
+\label{sec:laptop}
+
+Show these only if asked, and only if they passed during practice. Connect the converter, then run these on the Mac, using the port name that the first command lists:
+
+\begin{center}
+\code{ls /dev/cu.usbserial*}\\
+\code{screen /dev/cu.usbserial-10 9600}
+\end{center}
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}l L D@{}}
+\toprule
+Key & Test & Expected\\
+\midrule
+\code{L} & List all slots with names and codes & Printed on the laptop\\
+\code{f} & Measure the carrier. Needs the jumper from P1.0 to P3.4 & \lcd{CARRIER MEASURED}{37971 Hz}\\
+\code{t}, then \code{l} & Self-test: load a test frame, send it and hear it on our own receiver. Aim the LED at the receiver's lens from 10--\qty{30}{\centi\metre} & \lcd{LOOPBACK HEARD}{MATCH 67 OF 67}\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+The 67-of-67 result is from an earlier build, and a timing constant in the send routine has changed since. The match count may differ on the final firmware, so we should know the real number before showing it.
+
+\newpage
+\section{Circuit and wiring check}
+
+\begin{center}
+\begin{circuitikz}[x=1cm,y=1cm,line width=0.5pt,every node/.style={font=\footnotesize}]
+\ctikzset{bipoles/thickness=1}
+\ctikzset{resistors/scale=0.75}
+\ctikzset{capacitors/scale=0.8}
+\ctikzset{diodes/scale=0.8}
+\ctikzset{monopoles/ground/width=0.22}
+
+\draw[dashed,gray] (-0.05,-1.0) rectangle (6.2,14.75);
+\node[anchor=north west,font=\footnotesize\sffamily\bfseries,text=gray!70!black] at (-0.05,14.7) {Pt-51 board};
+\draw[dashed,gray] (6.9,1.95) rectangle (15.8,14.75);
+\node[anchor=north east,font=\footnotesize\sffamily\bfseries,text=gray!70!black] at (15.75,14.7) {Soldered board};
+
+\draw[thick] (3.2,-0.3) rectangle (5.8,13.5);
+\node[align=center,font=\footnotesize\bfseries] at (4.5,8.3) {AT89C5131A};
+\node[align=center,font=\scriptsize] at (4.5,7.85) {24 MHz, X1 mode};
+
+\node[anchor=east] at (5.75,12.8) {+5\,V};
+\node[anchor=east] at (5.75,12.0) {GND};
+\node[anchor=east] at (5.75,9.6) {P1.0 (T2 out)};
+\node[anchor=east,font=\scriptsize,text=gray!60!black] at (5.75,9.2) {SW1 must be OFF};
+\node[anchor=east] at (5.75,6.0) {P3.2};
+\node[anchor=east] at (5.75,4.0) {P3.5};
+\node[anchor=east] at (5.75,2.7) {P3.3};
+\node[anchor=east] at (5.75,1.2) {P3.0 RxD};
+\node[anchor=east] at (5.75,0.4) {P3.1 TxD};
+
+\node[anchor=west] at (3.25,12.5) {P2.0--P2.7};
+\node[anchor=west] at (3.25,11.6) {P0.0};
+\node[anchor=west] at (3.25,10.9) {P0.1};
+\node[anchor=west] at (3.25,10.2) {P0.2};
+\node[anchor=west] at (3.25,6.9) {P1.1};
+\node[anchor=west] at (3.25,6.0) {P1.2};
+\node[anchor=west] at (3.25,5.1) {P1.3};
+\node[anchor=west] at (3.25,2.8) {P1.7};
+
+\draw[thick] (0.1,9.7) rectangle (2.1,13.2);
+\node[align=center] at (0.72,11.4) {LCD\\16$\times$2};
+\node[anchor=east] at (2.05,12.5) {D0--D7};
+\node[anchor=east] at (2.05,11.6) {RS};
+\node[anchor=east] at (2.05,10.9) {RW};
+\node[anchor=east] at (2.05,10.2) {EN};
+\draw[line width=1.4pt] (2.1,12.5) -- (3.2,12.5);
+\draw (2.55,12.33) -- (2.75,12.67);
+\node[above] at (2.65,12.6) {8};
+\draw (2.1,11.6) -- (3.2,11.6);
+\draw (2.1,10.9) -- (3.2,10.9);
+\draw (2.1,10.2) -- (3.2,10.2);
+
+\draw[thick] (0.1,4.5) rectangle (2.1,7.5);
+\node[align=center,font=\scriptsize] at (0.72,6.0) {ON =\\pin to\\GND};
+\node[anchor=east] at (2.05,6.9) {SW2};
+\node[anchor=east] at (2.05,6.0) {SW3};
+\node[anchor=east] at (2.05,5.1) {SW4};
+\draw (2.1,6.9) -- (3.2,6.9);
+\draw (2.1,6.0) -- (3.2,6.0);
+\draw (2.1,5.1) -- (3.2,5.1);
+
+\draw[thick] (0.1,2.2) rectangle (2.1,3.4);
+\node[align=center,font=\scriptsize] at (1.1,2.8) {LED4\\(IR activity)};
+\draw (2.1,2.8) -- (3.2,2.8);
+
+\draw (5.8,12.8) -- (7.4,12.8) -- (7.4,13.9) -- (13.0,13.9);
+\node[above] at (9.6,13.9) {+5\,V};
+\draw (5.8,12.0) -- (6.55,12.0) node[ground]{};
+
+\draw (8.0,13.9) to[short,*-] (8.0,12.3) to[R,l={$R_2$\ \qty{2.2}{\kilo\ohm}}] (8.0,10.4) -- (8.0,9.6);
+\draw (5.8,9.6) to[short,-*] (8.0,9.6) to[R,l={$R_3$\ \qty{1}{\kilo\ohm}}] (10.45,9.6);
+\node[npn] (Q1) at (11.2,9.6) {};
+\draw (10.45,9.6) -- (Q1.B);
+\node[anchor=west,align=left] at (11.45,9.6) {$Q_1$\\BC547B};
+\draw (Q1.E) -- ++(0,-0.25) node[ground]{};
+\draw (Q1.C |- 0,13.9) to[short,*-] (Q1.C |- 0,13.6) to[R,l={$R_1$\ \qty{100}{\ohm}}] (Q1.C |- 0,12.1) to[full led] (Q1.C |- 0,10.7) -- (Q1.C);
+\node[anchor=east,align=right] at ([xshift=-0.35cm]Q1.C |- 0,11.4) {$D_1$\\IR LED};
+
+\draw (13.0,13.9) -- (13.0,9.6) to[R,l={$R_4$\ \qty{100}{\ohm}}] (13.0,7.7) -- (13.0,7.0);
+\draw (13.0,7.7) to[short,*-] (14.55,7.7) to[eC] (14.55,4.8) node[ground]{};
+\node[anchor=west,align=left,font=\scriptsize] at (14.88,6.25) {$C_1$\\\qty{4.7}{\micro\farad}};
+\draw[thick] (12.2,5.0) rectangle (14.2,7.0);
+\node[anchor=north,font=\scriptsize] at (13.0,6.98) {2 VS};
+\node[anchor=west,font=\scriptsize] at (12.23,6.0) {3 OUT};
+\node[anchor=south,font=\scriptsize] at (13.0,5.02) {1 GND};
+\node[anchor=south east] at (12.9,7.03) {HS0038A2};
+\draw (13.0,5.0) -- (13.0,4.75) node[ground]{};
+\draw (5.8,6.0) -- (12.2,6.0);
+
+\draw (5.8,4.0) -- (8.2,4.0) to[nopb,l={SEND}] (9.8,4.0) node[ground]{};
+\draw (5.8,2.7) -- (8.2,2.7) to[nopb,l={REC}] (9.8,2.7) node[ground]{};
+
+\draw[thick] (8.4,-0.2) rectangle (11.4,1.6);
+\node[anchor=west,font=\scriptsize] at (8.45,1.2) {TXD};
+\node[anchor=west,font=\scriptsize] at (8.45,0.4) {RXD};
+\node[align=center,font=\scriptsize] at (10.3,0.75) {USB-TTL\\converter};
+\draw[-latex] (8.4,1.2) -- (5.8,1.2);
+\draw[-latex] (5.8,0.4) -- (8.4,0.4);
+\draw (10.3,-0.2) -- (10.3,-0.4) node[ground]{};
+\node[anchor=west,align=left,font=\scriptsize] at (11.55,0.7) {USB to computer\\(development only)};
+\end{circuitikz}
+\end{center}
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}l l L@{}}
+\toprule
+Part or signal & Pin & Check\\
+\midrule
+Six wires to the soldered board & & \qty{5}{\volt}, GND, P1.0, P3.2, P3.3, P3.5\\
+BC547B & & Flat face towards you, left to right: C, B, E\\
+HS0038A2 & & Lens towards you, left to right: 1 GND, 2 VS, 3 OUT\\
+IR LED & & Long leg to $R_1$, short leg to the collector\\
+USB-TTL (optional) & P3.0, P3.1 & Converter TXD to P3.0, RXD to P3.1, GND to GND\\
+Carrier jumper (only for \code{f}) & P1.0 to P3.4 & Remove it afterwards\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\newpage
+\section{Revision: how it works}
+
+\textbf{The signal.} A remote sends bursts of \qty{38}{\kilo\hertz} IR (marks) separated by silence (spaces), and the data is in their lengths. The carrier lets a receiver tell the signal apart from sunlight and room lighting.
+
+\textbf{Receiving.} The HS0038A2 contains a photodiode, amplifier, \qty{38}{\kilo\hertz} band-pass filter and demodulator. Its output is low during a mark and high during a space, so P3.2 sees only the timing, never the carrier.
+
+\textbf{Recording.} After REC, the firmware waits for the first low on P3.2, then uses Timer~0 (16-bit, \qty{0.5}{\micro\second} per tick) to time every level and stores each duration in external RAM. It stops after \qty{164}{\milli\second} of silence. Fewer than 8 durations counts as a stray flash and is ignored.
+
+\textbf{Decoding.} An NEC frame is a \qty{9}{\milli\second} mark and \qty{4.5}{\milli\second} space, then 32 bits, then a stop mark: 67 durations in total. Every bit starts with a \qty{560}{\micro\second} mark, and the space that follows gives its value: \qty{560}{\micro\second} for 0, \qty{1690}{\micro\second} for 1. The bytes, sent least significant bit first, are address, address, command and inverted command. Epson POWER is \mbox{\code{83 55 90 6F}}: address 83 55, command 90, and 6F is 90 inverted, which is the validity check.
+
+\textbf{Storing.} Each slot takes 13 bytes: a used flag, three code bytes and a 9-byte name. Eight slots take 104 bytes of the chip's \qty{1}{\kilo\byte} EEPROM, which keeps its contents without power. The table is copied to RAM at start-up.
+
+\textbf{Sending.} A saved button is not replayed from the recording. The frame is rebuilt from the three stored bytes, which gives exact NEC timing, free of the receiver's distortion (marks about \qty{90}{\micro\second} long, spaces about \qty{70}{\micro\second} short), and a repeat code is added to look like a real key press. Timer~2 runs continuously in clock-out mode. For a mark the firmware connects it to P1.0, for a space it disconnects it, and Timer~0 times each one.
+
+\textbf{Driving the LED.} A port pin cannot supply \qty{36}{\milli\ampere}, so P1.0 switches a BC547B. Port~1's internal pull-up is too weak to drive the base, which is why the \qty{2.2}{\kilo\ohm} pull-up is there. When P1.0 is low, the transistor and LED are off.
+
+\textbf{Control.} There are no interrupts. The main loop copies the receiver state to LED4, checks both buttons, updates the LCD when the switches change and handles UART keys.
+
+\section{What we did, in order}
+
+\begin{enumerate}
+\item \textbf{Receiver:} wired the HS0038A2 and confirmed LED4 follows a remote. The A2 pin order differs from the HS0038B, so we checked the datasheet.
+\item \textbf{Carrier:} used Timer~2 clock-out instead of the planned PCA. It first measured \qty{75950}{\hertz}, because the divider runs from the full \qty{24}{\mega\hertz}. Changing RCAP2 to FF62H gave \qty{37971}{\hertz}.
+\item \textbf{Self-test:} built the loopback. It was unstable with the LED at the receiver's side, and gave 67 of 67 when aimed at the lens.
+\item \textbf{First clone:} captured Epson POWER and replayed it, and the projector responded. Rejected stray flashes after the lamp triggered a one-pulse capture.
+\item \textbf{Slots:} added NEC decoding, rebuilt frames and 8 slots in EEPROM.
+\item \textbf{Standalone:} added the LCD, switches and buttons. SW1 could not be the enable because it shares P1.0, so control moved to P3.5 and P3.3. Fixed the blank line 2 by holding EN high for \qty{1}{\milli\second}, because P0 is open-drain and has a slow pull-up.
+\item \textbf{Soldered:} moved to the soldered board. The LCD dimmed with P1.0 unwired, because the pull-up held the LED on, and it was fine once fully connected. Slots survived power-off and a week between labs.
+\end{enumerate}
+
+\section{Numbers to remember}
+
+\begin{center}
+\small
+\begin{tabular}{@{}ll@{\hspace{1.2cm}}ll@{}}
+\toprule
+Crystal, mode & \qty{24}{\mega\hertz}, X1 & NEC frame & 67 durations, 32 bits\\
+Timer tick & \qty{0.5}{\micro\second} & Frame period & \qty{108}{\milli\second}\\
+Carrier target, measured & \qty{38}{\kilo\hertz}, \qty{37971}{\hertz} & Slots & 8, at 13 bytes each\\
+Carrier reload & RCAP2 = FF62H & Storage & \qty{1}{\kilo\byte} on-chip EEPROM\\
+Carrier formula & $24\,\mathrm{MHz} / (4 \times 158)$ & LED current (calculated) & \qty{36}{\milli\ampere}\\
+Tested range & about \qty{1}{\metre} & LED, base, pull-up resistors & \qty{100}{\ohm}, \qty{1}{\kilo\ohm}, \qty{2.2}{\kilo\ohm}\\
+Epson POWER & \code{83 55 90 6F} & Receiver filter & \qty{100}{\ohm}, \qty{4.7}{\micro\farad}\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{If the professor asks}
+
+\small
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{5cm} L@{}}
+\toprule
+Question & Answer\\
+\midrule
+Why a \qty{38}{\kilo\hertz} carrier? & So the receiver's band-pass filter can reject steady IR from sunlight and lamps.\\
+Why not toggle the pin in software? & The half period is \qty{13}{\micro\second}, about 26 machine cycles, which leaves too little time to do anything else. Timer~2 does it in hardware.\\
+Why a transistor? & A port pin cannot supply the LED current. The BC547B switches \qty{36}{\milli\ampere} using about \qty{1.3}{\milli\ampere} of base current.\\
+Why \qty{100}{\ohm} on the LED? & It sets the current. Pins are high during reset and boot, so the LED stays on until the program starts, and \qty{47}{\ohm} would exceed a \qty{0.25}{\watt} resistor's rating.\\
+Why save the code, not the recording? & It needs 3 bytes instead of 134, and the rebuilt frame has exact timing without the receiver's distortion.\\
+Can it clone any remote? & No. It saves only NEC format. Others can be replayed from RAM over the laptop link, but that is untested on other brands.\\
+What is the range? & About \qty{1}{\metre} when aimed. We did no formal range test. The beam is narrow; a second \qty{100}{\ohm} in parallel would roughly double the current.\\
+How did you check it without a scope? & Timer~0 counted the carrier on P3.4 for \qty{131}{\milli\second}, and the loopback compared sent and received timing.\\
+Are interrupts used? & No. The firmware does one job at a time and polls, which keeps the timing loops simple.\\
+What language is it in? & Embedded C, compiled with SDCC, flashed over USB.\\
+\bottomrule
+\end{tabularx}
+
+\end{document}
