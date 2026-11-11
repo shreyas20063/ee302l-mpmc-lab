@@ -10,8 +10,10 @@ MVI B,00H	; crossing count
 LOOP: MOV A,M
 CPI 80H		; A < 80H sets CY
 JC SKIP
-STAX D		; store crossing at destination
-INX D
+XCHG		; HL = destination, DE = source (the simulator's STAX D is broken)
+MOV M,A		; store crossing at destination
+INX H
+XCHG		; swap back: HL = source, DE = next free slot
 INR B
 SKIP: INX H
 DCR C

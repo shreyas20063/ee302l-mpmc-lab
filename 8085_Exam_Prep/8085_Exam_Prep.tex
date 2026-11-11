@@ -1,0 +1,313 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{newtxtext,newtxmath}
+\usepackage[varqu,varl,scaled=0.95]{zi4}
+\usepackage[a4paper,margin=1.8cm,top=2cm,bottom=1.8cm]{geometry}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{siunitx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{listings}
+\usepackage{multicol}
+\usepackage{needspace}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{accent}{HTML}{1F3A5F}
+\definecolor{codebg}{HTML}{F4F6F8}
+\definecolor{warn}{HTML}{9B2C2C}
+
+\sisetup{group-separator={,},group-minimum-digits=4,per-mode=symbol}
+\setlist{itemsep=1pt,topsep=2pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt plus 1pt}
+\setlength{\columnsep}{0.6cm}
+\renewcommand{\arraystretch}{1.15}
+\renewcommand{\tabularxcolumn}[1]{m{#1}}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\newcommand{\code}[1]{\texttt{#1}}
+
+\lstset{basicstyle=\ttfamily\footnotesize,columns=fullflexible,keepspaces=true,
+  backgroundcolor=\color{codebg},frame=none,xleftmargin=4pt,xrightmargin=4pt,
+  aboveskip=0pt,belowskip=0pt,showstringspaces=false}
+
+\titleformat{\section}{\large\sffamily\bfseries\color{accent}}{\thesection}{0.6em}{}
+\titlespacing*{\section}{0pt}{10pt}{3pt}
+
+\newcommand{\prog}[2]{\needspace{12\baselineskip}\section{#1}\label{#2}}
+\newcommand{\meta}[2]{\textbf{Start From \code{#1}.} #2\par}
+\newcommand{\twocol}[3]{%
+\begin{minipage}[t]{#1\textwidth}\vspace{0pt}\lstinputlisting{programs/#2}\end{minipage}\hfill
+\begin{minipage}[t]{\dimexpr0.97\textwidth-#1\textwidth\relax}\vspace{0pt}#3\end{minipage}\par}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small 8085 Lab Exam Prep}
+\rhead{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\hypersetup{pdftitle={8085 Lab Exam Prep},pdfauthor={Shreyas}}
+
+\begin{document}
+
+{\LARGE\sffamily\bfseries\color{accent} 8085 Lab Exam Prep\par}
+\vspace{2pt}
+{\small Shreyas (EC24BT033), EE302L, November 2026. Every program below was checked in an 8085 model that copies this simulator's known bugs. The last column of the table says which ones were also run in the real simulator during the labs; practise the rest tonight.\par}
+\vspace{4pt}
+
+\section*{The programs}
+\small
+\begin{tabularx}{\textwidth}{@{}l l L l r l@{}}
+\toprule
+& Lab & Program & Start From & Page & Run in the real simulator\\
+\midrule
+1 & Week 2, Task 1 & Add two 8-bit numbers (same as Week 1) & \code{7000} & \pageref{p1} & Yes\\
+2 & Week 1, extension & Add two 8-bit numbers, keep the carry & \code{7000} & \pageref{p2} & Not yet\\
+3 & Week 2, Task 2 & Subtract, with borrow & \code{7000} & \pageref{p3} & Yes\\
+4 & Week 2, Task 3 & Add two 16-bit numbers & \code{7000} & \pageref{p4} & Yes\\
+5 & Week 3, Exp 1 & Multiply by repeated addition & \code{7000} & \pageref{p5} & Not yet\\
+6 & Week 3, Exp 2 & Divide by repeated subtraction & \code{7000} & \pageref{p6} & Not yet\\
+7 & Week 3, Exp 3 & Safe limit check & \code{7000} & \pageref{p7} & Not yet\\
+8 & Week 4, Task 1 & ADC threshold filter & \code{7000} & \pageref{p8} & Not yet\\
+9 & Week 4, Task 2 & Inverted LED pyramid & \code{7000} & \pageref{p9} & Not yet\\
+10 & Week 4, Task 3 & Traffic light controller & \code{7000} & \pageref{p10} & Not yet\\
+11 & Week 5, Q1 & Reverse an array with the stack & \code{2000} & \pageref{p11} & Not yet\\
+12 & Week 5, Q2 & Add in a subroutine, keep BC safe & \code{2000} & \pageref{p12} & Not yet\\
+13 & Week 5, Q3 & BCD counter with RST 7.5 alarm & \code{2000} & \pageref{p13} & Yes\\
+14 & Week 6, Task 1 & Railway crossing controller & \code{7000} & \pageref{p14} & Yes\\
+15 & Week 6, Task 2 & Tank level controller & \code{7000} & \pageref{p15} & Yes\\
+\bottomrule
+\end{tabularx}
+\normalsize
+
+\section*{Running a program}
+\begin{enumerate}[leftmargin=*]
+\item Type or paste it into the \textbf{Editor}, then click \textbf{Assemble}.
+\item In the \textbf{Assembler} tab, set \textbf{Start From} to the program's \code{\# ORG} (\code{7000} or \code{2000}). It defaults to \code{0000}.
+\item Click \textbf{Run} at Normal speed, or \textbf{Step By Step} then \textbf{Forward} to watch registers and flags change.
+\item Read the results:
+\begin{itemize}
+\item \textbf{Memory} tab for memory.
+\item \textbf{Devices} tab, I/O Port Editor, for \code{OUT} ports. The row is the port's high digit and the column its low digit, so port \code{20H} is row 20, column 0.
+\item The \textbf{Registers} panel for A, the flags and the \code{R7.5} cell.
+\end{itemize}
+\item To change an input without reassembling, use the Memory tab's option to store directly to a memory location.
+\item Before a clean run, use \textbf{Settings, Clear Memory}. Run does not reset the registers, memory or interrupt state.
+\item For a breakpoint, click the \code{\textsurd} in the \code{*} column so it becomes \code{\#}. The run pauses there.
+\end{enumerate}
+
+\section*{Simulator traps}
+\begin{itemize}[leftmargin=*]
+\item {\color{warn}\textbf{Never use \code{STAX} or \code{LDAX}.}} They compute the wrong address and can freeze the run with no error. Go through HL: \code{MOV M,A}, \code{MOV A,M}, and \code{XCHG} for a second pointer.
+\item \textbf{One \code{\# ORG} per \code{\# DB} line.} A second \code{\# DB} line restarts at the last \code{\# ORG} and overwrites the first.
+\item \textbf{\code{DAA} is wrong for 99H + 01H:} it gives \code{A0H}. Wrap a BCD counter yourself with \code{CPI 99H}.
+\item \textbf{End with \code{RST 1}}, which is the simulator's stop instruction.
+\item \textbf{A run that hangs at Normal speed has crashed}; the program isn't just slow. Stop it and look for \code{STAX} or \code{LDAX}.
+\item \textbf{Hex is the default number base:} \code{7501} means \code{7501H}. Put a 0 in front of a number that starts with a letter (\code{0FFH}, \code{0A2C3H}), as all our lab files do.
+\item \textbf{No \code{;} comment after a \code{//} comment on the same line.} It's a known parser bug, and the safest choice is to skip comments in the exam.
+\item \textbf{At Normal speed the port grid updates only now and then.} The final values always appear when the program stops.
+\item \textbf{RST 7.5 programs:} the \code{R7.5} cell must read 0 before you press Run. Click it to fire the interrupt and click again to release it.
+\end{itemize}
+
+\section*{Flags in one place}
+\small
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{4.4cm} L@{}}
+\toprule
+Instruction & Effect on flags\\
+\midrule
+\code{CMP r}, \code{CPI d} & Computes A minus the operand and keeps only the flags. CY=1 means A is smaller, Z=1 means they are equal.\\
+\code{ORA A} & Leaves A unchanged, sets Z if A is 0, clears CY. The usual \emph{is A zero?} test.\\
+\code{ANA}, \code{ORA}, \code{XRA} & Always clear CY.\\
+\code{INR}, \code{DCR} & Set Z but never touch CY.\\
+\code{INX}, \code{DCX} & Touch no flags at all, so a 16-bit countdown is tested with \code{MOV A,B / ORA C / JNZ}.\\
+\code{DAD rp} & Changes only CY.\\
+\code{MOV}, \code{MVI}, \code{LDA}, \code{STA}, \code{LXI} & Touch no flags, which is why a carry survives from \code{ADD} to \code{ADC}.\\
+\code{RLC}, \code{RAL}, \code{RAR} & \code{RLC} copies bit 7 into CY and bit 0. \code{RAL} and \code{RAR} rotate through CY.\\
+\bottomrule
+\end{tabularx}
+\normalsize
+
+\section*{The 1-second delay at 1 MHz}
+At 1 MHz, one second is \num{1000000} T-states. The loop below takes 24 T-states per lap: \code{DCX} 6, \code{MOV} 4, \code{ORA} 4 and \code{JNZ} 10. So it needs \num{1000000} / 24 $\approx$ \num{41667} laps, which is \code{A2C3H}.
+
+\begin{minipage}[t]{0.3\textwidth}\vspace{0pt}
+\begin{lstlisting}
+DELAY: LXI B,0A2C3H
+DLOOP: DCX B
+MOV A,B
+ORA C
+JNZ DLOOP
+RET
+\end{lstlisting}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.66\textwidth}\vspace{0pt}
+The simulator runs far slower than a real 1 MHz chip, so in the lab we used small counts to make the lights visible: \code{0200H} for the traffic light and \code{0A00H} for the pyramid. Use the same counts in the exam, and if asked, say \code{A2C3H} is the value for real hardware and show this calculation.
+\end{minipage}
+
+\prog{Add two 8-bit numbers (Week 2, Task 1)}{p1}
+\meta{7000}{Inputs at \code{7501H} and \code{7502H}, sum at \code{7503H}. Week 1 is the same program with data \code{12H, 13H}.}
+\twocol{0.34}{w2_t1_add.asm}{%
+\textbf{Idea.} HL points at the first number. \code{MOV A,M} loads it, \code{INX H} moves to the next byte, \code{ADD M} adds the byte HL now points to, and \code{MOV M,A} stores the result at the third address.
+
+\textbf{Check.} \code{19H + 1CH}: \code{7503H = 35H}, CY = 0.}
+
+\prog{Add two 8-bit numbers, keep the carry (Week 1, extension)}{p2}
+\meta{7000}{Inputs \code{7501H}, \code{7502H}. Sum at \code{7503H}, carry at \code{7504H}.}
+\twocol{0.34}{w1_add_carry.asm}{%
+\textbf{Idea.} C starts at 0. If the addition carries, \code{JNC} falls through and \code{INR C} makes C = 1.
+
+\textbf{Check.} \code{88H + 88H = 110H}: \code{7503H = 10H}, \code{7504H = 01H}. With \code{12H, 13H}: \code{25H}, \code{00H}.}
+
+\prog{Subtract, with borrow (Week 2, Task 2)}{p3}
+\meta{7000}{\code{7501H} minus \code{7502H}, result at \code{7503H}.}
+\twocol{0.34}{w2_t2_sub.asm}{%
+\textbf{Idea.} \code{SUB M} sets CY when the result goes below zero. The stored byte is then the two's complement of the size of the difference.
+
+\textbf{Check.} \code{40H - 2EH}: \code{12H}, CY = 0. Swap them, \code{2EH - 40H}: \code{EEH}, CY = 1, which means borrow, and \code{EEH} is the two's complement of \code{12H}.}
+
+\prog{Add two 16-bit numbers (Week 2, Task 3)}{p4}
+\meta{7000}{Number 1 at \code{7601H} (low), \code{7602H} (high). Number 2 at \code{7603H}, \code{7604H}. Sum at \code{7500H}, \code{7501H}, carry out at \code{7502H}.}
+\twocol{0.34}{w2_t3_add16.asm}{%
+\textbf{Idea.} \code{ADD} the low bytes, then \code{ADC} the high bytes so the low carry is included. \code{LDA}, \code{MOV} and \code{STA} touch no flags, so the carry survives in between. Finally store \code{00H} or \code{01H} for the last carry.
+
+\textbf{Check.} \code{80FFH + 9001H = 11100H}: \code{7500H = 00H}, \code{7501H = 11H}, \code{7502H = 01H}. The data makes both bytes carry, which proves \code{ADC} works.}
+
+\prog{Multiply by repeated addition (Week 3, Exp 1)}{p5}
+\meta{7000}{Batch size at \code{2500H}, number of batches at \code{2501H}. Product LSB at \code{2502H}, MSB at \code{2503H}.}
+\twocol{0.34}{w3_e1_mult.asm}{%
+\textbf{Idea.} HL holds a 16-bit running total and DE holds the batch size. \code{DAD D} adds DE to HL, repeated C times. \code{SHLD 2502H} stores L then H, which is LSB first as asked.
+
+\textbf{Why \code{ORA A / JZ}:} with 0 batches, \code{DCR C} would wrap from \code{00H} to \code{FFH} and loop 256 times.
+
+\textbf{Check.} \code{40H} times \code{05H} = 320 = \code{0140H}: \code{2502H = 40H}, \code{2503H = 01H}. \code{FFH} times \code{FFH}: \code{01H}, \code{FEH}.}
+
+\prog{Divide by repeated subtraction (Week 3, Exp 2)}{p6}
+\meta{7000}{Distance at \code{2500H}, fuel at \code{2501H}. Quotient at \code{2502H}, remainder at \code{2503H}.}
+\twocol{0.34}{w3_e2_div.asm}{%
+\textbf{Idea.} B = fuel, A = distance, C counts. While A is at least B, subtract B and add 1 to C. \code{CMP B} sets CY once A is smaller, and what is left in A is the remainder.
+
+\textbf{Fuel = 0} would loop forever, so it is caught first: quotient \code{FFH}, remainder = distance.
+
+\textbf{Check.} \code{EAH / 0CH} = 234 / 12: \code{2502H = 13H} (19), \code{2503H = 06H}.}
+
+\prog{Safe limit check (Week 3, Exp 3)}{p7}
+\meta{7000}{Reading at \code{2500H}, minimum at \code{2501H}, maximum at \code{2502H}. Status at \code{2503H}: \code{01} low, \code{02} high, \code{00} normal.}
+\twocol{0.34}{w3_e3_limit.asm}{%
+\textbf{Idea.} \code{CMP B}: CY means the reading is below the minimum. \code{CMP C}: CY means below the maximum and Z means equal to it, and both count as normal. Anything else is above the maximum.
+
+\textbf{Check} (min \code{30H}, max \code{70H}):
+
+\begin{tabular}{@{}llllll@{}}
+Reading & \code{50H} & \code{20H} & \code{90H} & \code{30H} & \code{70H}\\
+Status & \code{00} & \code{01} & \code{02} & \code{00} & \code{00}\\
+\end{tabular}}
+
+\prog{ADC threshold filter (Week 4, Task 1)}{p8}
+\meta{7000}{Ten samples at \code{2000H} to \code{2009H}. Copy each one that is \code{80H} or more to \code{3000H} onwards, and store how many at \code{4000H}.}
+\twocol{0.42}{w4_t1_adc_filter.asm}{%
+\textbf{Idea.} Two pointers: HL for the samples and DE for the copies. To store a copy, \code{XCHG} swaps them so HL points at the destination, \code{MOV M,A} stores, \code{INX H} moves on, and a second \code{XCHG} swaps back.
+
+{\color{warn}\textbf{Not \code{STAX D}.}} It is the textbook instruction here, but in this simulator it writes to the wrong address from the second copy on and crashes on the fourth. The file in the Week 4 folder used it; it is now fixed the same way.
+
+\textbf{\code{CPI 80H}}: CY means the sample is below \code{80H}, so it is skipped. \code{80H} itself is copied.
+
+\textbf{Check.} \code{3000H} to \code{3004H} = \code{85 80 FF 90 A5}, \code{4000H = 05H}.}
+
+\prog{Inverted LED pyramid (Week 4, Task 2)}{p9}
+\meta{7000}{Ports \code{01H} to \code{04H}, eight LEDs each, lit one row at a time with a delay in between.}
+\twocol{0.34}{w4_t2_pyramid.asm}{%
+\textbf{Idea.} Each row is one byte, read with the left LED as bit 7:
+
+\begin{tabular}{@{}lll@{}}
+Port 1 & \code{1111 1110} & \code{FEH}\\
+Port 2 & \code{0111 1100} & \code{7CH}\\
+Port 3 & \code{0011 1000} & \code{38H}\\
+Port 4 & \code{0001 0000} & \code{10H}\\
+\end{tabular}
+
+An output port holds its value until the next \code{OUT} to it, so earlier rows stay lit with no extra code. \code{LXI SP} is set first because \code{CALL} uses the stack.
+
+\textbf{Check.} Devices tab: port \code{01H = FE}, \code{02H = 7C}, \code{03H = 38}, \code{04H = 10}.
+
+In the lab we submitted a longer version that draws one cell per LED in the port grid (Week 4 folder). This one is the literal reading of the question and far shorter to write.}
+
+\prog{Traffic light controller (Week 4, Task 3)}{p10}
+\meta{7000}{Table at \code{2000H}: pairs of (light, seconds). Port \code{20H}: D0 red, D1 yellow, D2 green. Repeat forever.}
+\twocol{0.34}{w4_t3_traffic.asm}{%
+\textbf{Idea.} HL walks the table. For each pair: \code{OUT} the light, load the seconds into B, and \code{DELB} calls the 1-second delay B times. C counts the three signals, then \code{JMP START} repeats.
+
+\textbf{Register choice.} The delay uses DE, so it can't disturb B (seconds) or C (signal count).
+
+\textbf{Check.} Port \code{20H} goes \code{04} (green), \code{02} (yellow), \code{01} (red) and repeats, with durations in the ratio 5 : 2 : 5. It never stops, so press Stop.
+
+The lab file ran the sequence twice and stopped. The question says \emph{repeat continuously}, so this version loops forever.}
+
+\prog{Reverse an array with the stack (Week 5, Q1)}{p11}
+\meta{2000}{Five bytes at \code{2050H}, reversed in place.}
+\twocol{0.34}{w5_q1_reverse.asm}{%
+\textbf{Idea.} The stack is last in, first out. Push the five bytes in order, then pop them back into the same five addresses, and the order flips.
+
+\textbf{Details.} \code{PUSH} only works on register pairs, so the byte goes in B and C rides along unused. The counter is D, not C, because \code{POP B} would overwrite C every lap.
+
+\textbf{Check.} \code{11 22 33 44 55} becomes \code{55 44 33 22 11}.}
+
+\prog{Add in a subroutine, keep BC safe (Week 5, Q2)}{p12}
+\meta{2000}{Add \code{05H} and \code{0AH} in a subroutine, result at \code{2060H}. The main program's BC must survive.}
+\twocol{0.34}{w5_q2_subroutine.asm}{%
+\textbf{Idea.} The subroutine uses B and C for its own work. \code{PUSH B} before the \code{CALL} and \code{POP B} after it restore the caller's values.
+
+\textbf{Check.} \code{2060H = 0FH}, and after the run B = \code{11}, C = \code{22}. Delete the \code{PUSH B} and \code{POP B} and they come back as \code{05}, \code{0A}.}
+
+\newpage
+\prog{BCD counter with RST 7.5 alarm (Week 5, Q3)}{p13}
+\meta{2000}{Counter on port \code{01H}, alarm on port \code{02H}, ISR at \code{003CH}, stack at \code{2700H}.}
+\begin{multicols}{2}
+\lstinputlisting{programs/w5_q3_bcd_isr.asm}
+\end{multicols}
+\textbf{Idea.}
+\begin{itemize}[leftmargin=*]
+\item \code{MVI A,08H / SIM} unmasks RST 7.5 and \code{EI} enables interrupts. Both are needed.
+\item The count lives in C. \code{ADI 01H / DAA} keeps it in BCD, and \code{CPI 99H} handles the 99-to-00 wrap because this simulator's \code{DAA} gets that case wrong.
+\item The ISR saves PSW, B and D on the stack (\emph{save the count on the stack} is \code{PUSH B}), then blinks port \code{02H} five times.
+\item \code{SIM 18H} resets the RST 7.5 flip-flop and \code{SIM 08H} releases it. \code{RIM / ANI 40H / JNZ} waits until you click the \code{R7.5} cell off.
+\item This simulator does not push a return address when RST 7.5 fires, so \code{RET} would jump to garbage. The ISR resets SP, enables interrupts and jumps back to \code{MAIN} instead.
+\end{itemize}
+\textbf{Run it.} \code{R7.5} reads 0, then Run. Port \code{01H} counts \code{00}, \code{01} and so on to \code{99}, then \code{00}. Click \code{R7.5} on: port \code{02H} blinks \code{FF}/\code{00} five times while the count freezes. Click it off: counting resumes from the same number.
+
+\newpage
+\prog{Railway crossing controller (Week 6, Task 1)}{p14}
+\meta{7000}{Sensor input port \code{80H} (\code{01} train, \code{00} none), gate output port \code{82H} (\code{01} closed), train count at \code{9000H}, ISR at \code{003CH}.}
+\begin{multicols}{2}
+\lstinputlisting{programs/w6_t1_railway.asm}
+\end{multicols}
+\textbf{Idea.}
+\begin{itemize}[leftmargin=*]
+\item \code{DI} comes first so interrupt state left over from an earlier run can't fire early. The gate starts open.
+\item \code{MAIN: CALL MONITOR / JMP MAIN} puts a return address on the stack before \code{EI}. The simulator pushes nothing on RST 7.5, so this is what lets the ISR end with \code{RET} as the question demands.
+\item ISR steps: add 1 to the count, close the gate, wait, then poll port \code{80H} up to 10 times until the sensor reads \code{00}. Open the gate, reset RST 7.5, wait for release, restore registers, \code{EI}, \code{RET}.
+\end{itemize}
+\textbf{Run it.} While stopped, optionally type \code{01} into port \code{80H} (row 80, column 0) for a train sitting at the sensor. Run: \code{82H = 00}. Click \code{R7.5} on: \code{82H = 01} and \code{9000H} goes up by 1, then the gate reopens. Click it off to go back to monitoring. Ports can only be edited while the simulator is stopped, which is why the polling stops after 10 tries.
+
+\newpage
+\prog{Tank level controller (Week 6, Task 2)}{p15}
+\meta{7000}{Readings at \code{9000H} to \code{9009H} (\code{00H} to \code{0AH}). Counts at \code{3000H} (low), \code{3001H} (normal), \code{3002H} (high), average at \code{3003H}. Pump at \code{2000H}, alarm at \code{2001H}, per-tank pump table at \code{2002H} to \code{200BH}. Overflow interrupt: \code{RST 7}, vector \code{0038H}.}
+\begin{multicols}{3}
+\lstinputlisting{programs/w6_t2_tank.asm}
+\end{multicols}
+\textbf{Idea} (the model the TAs described: one pump per tank).
+\begin{itemize}[leftmargin=*]
+\item Visit one tank per pass. Below \code{03H} is low: count it, pump on. Above \code{08H} is high: count it, pump off. Otherwise it's normal: count it and keep that tank's previous pump state from the table.
+\item After tank $k$, E holds the running sum. The average is found by repeated subtraction and stored at \code{3003H}.
+\item The average is above 80\% of \code{0AH} exactly when the sum is above $8k$. \code{RLC} three times multiplies $k$ by 8, so no fractions are needed.
+\item On overflow, \code{RST 7} is a software interrupt: it pushes the return address and jumps to \code{0038H}, where \code{JMP ALARM} turns every pump off and holds the alarm on for the delay. \code{RST 7} does push in this simulator, so \code{RET} works normally.
+\item After tank 10, the whole cycle starts again.
+\end{itemize}
+\textbf{Check.} The data in the file is \code{0A 0A 03 04 05 06 07 08 09 0A}. Run, Stop after a moment, then read: \code{3000H = 00}, \code{3001H = 06}, \code{3002H = 04}, \code{3003H = 07}. The alarm fires after tanks 1 and 2 (sums 10 and 20 are above 8 and 16). To see an alarm, put a breakpoint on \code{RST 7}.
+
+\end{document}

@@ -95,7 +95,7 @@ Task 3's port 20H is the row labelled `20`, first column.
 | Instruction | Meaning |
 |---|---|
 | `CPI 80H` | compare A with a constant: invisible `A − 80H`, notes only. CY=1 → A was smaller |
-| `STAX D` | store A at the address in DE — `STA`'s pointer cousin, and the mirror of `LDAX` |
+| `XCHG` | swap HL and DE. Task 1 keeps the destination in DE and swaps it into HL to store with `MOV M,A`, because this simulator's `STAX D` computes the wrong address and kills the run from the fourth crossing on |
 | `OUT 01H` | send A to output port 01H. Ports are a separate 256-slot address space reached only by `IN`/`OUT` |
 | `CALL DELAY` | jump to a label AND push the return address on the stack |
 | `RET` | pop that address, jump back — `CALL`'s round trip home |
