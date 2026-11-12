@@ -25,4 +25,4 @@ RST 1
 ; crossings here: 85,80,FF,90,A5 -> 3000H-3004H, count 05H at 4000H
 ; 7FH and 80H are the boundary pair: only 80H qualifies
 # ORG 2000H
-# DB 12H, 85H, 7FH, 80H, 03H, 0FFH, 45H, 90H, 7EH, 0A5H
+# DB 12H, 85H, 7FH, 80H, 03H, FFH, 45H, 90H, 7EH, A5H

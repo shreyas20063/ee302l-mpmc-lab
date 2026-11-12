@@ -109,7 +109,8 @@
 \item \textbf{\code{DAA} is wrong for 99H + 01H:} it gives \code{A0H}. Wrap a BCD counter yourself with \code{CPI 99H}.
 \item \textbf{End with \code{RST 1}}, which is the simulator's stop instruction.
 \item \textbf{A run that hangs at Normal speed has crashed}; the program isn't just slow. Stop it and look for \code{STAX} or \code{LDAX}.
-\item \textbf{Hex is the default number base:} \code{7501} means \code{7501H}. Put a 0 in front of a number that starts with a letter (\code{0FFH}, \code{0A2C3H}), as all our lab files do.
+\item {\color{warn}\textbf{No leading 0 in \code{\# DB} lines.}} \code{\# DB 0FFH} stores \code{FFFH}, so the byte comes out wrong. Write \code{FFH}, \code{EAH}, \code{A5H}. Hex is the default base, and instruction operands accept either form (\code{MVI A,FEH} works), so dropping the 0 everywhere is the safe habit.
+\item \textbf{\code{DAD} sets CY but never clears it.} A stale carry survives, so put \code{ORA A} just before \code{DAD} when the carry matters.
 \item \textbf{No \code{;} comment after a \code{//} comment on the same line.} It's a known parser bug, and the safest choice is to skip comments in the exam.
 \item \textbf{At Normal speed the port grid updates only now and then.} The final values always appear when the program stops.
 \item \textbf{RST 7.5 programs:} the \code{R7.5} cell must read 0 before you press Run. Click it to fire the interrupt and click again to release it.

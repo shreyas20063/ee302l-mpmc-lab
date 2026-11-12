@@ -39,7 +39,7 @@ RET
 
 ; the pyramid itself: port = grid cell (high nibble row, low nibble col)
 # ORG 2000H
-# DB 00H,01H,02H,03H,04H,05H,06H,0FFH
-# DB 11H,12H,13H,14H,15H,0FFH
-# DB 22H,23H,24H,0FFH
-# DB 33H,0FEH
+# DB 00H,01H,02H,03H,04H,05H,06H,FFH
+# DB 11H,12H,13H,14H,15H,FFH
+# DB 22H,23H,24H,FFH
+# DB 33H,FEH

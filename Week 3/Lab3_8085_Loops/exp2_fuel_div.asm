@@ -27,4 +27,4 @@ RST 1
 
 ; EAH / 0CH = 234 / 12 -> quotient 13H (19), remainder 06H
 # ORG 2500H
-# DB 0EAH, 0CH
+# DB EAH, 0CH
